@@ -1,0 +1,81 @@
+#!/bin/sh
+#internet up. DdShurick 04.05.2015 version 003
+[ $(/usr/bin/whoami) = root ] || exec loginroot $0
+
+up_func () {
+ case $1 in
+  modem) /lib/udev/wvdial.sh ;;
+  *) echo "$1=on" > /etc/network-wizard/network/interfaces/$(cat /sys/class/net/$1/address|tr [a-z] [A-Z]).conf
+   /lib/udev/net_up.sh $1 ;;
+ esac
+echo $1 up
+}
+
+down_func () {
+[ -f /var/run/dhcpcd-${1}.pid ] && /usr/sbin/dhcpcd -k $1
+[ $(/bin/pidof wpa_supplicant) ] && /bin/kill $(/bin/pidof wpa_supplicant)
+[ $(/bin/pidof wvdial) ] && /bin/kill $(/bin/pidof wvdial)
+[ "$(cat /sys/class/net/$1/operstate)" = up ] && ifconfig $1 down
+[ -h /sys/class/net/$1 ] && echo "$1=off" > /etc/network-wizard/network/interfaces/$(cat /sys/class/net/$1/address|tr [a-z] [A-Z]).conf
+echo "$1 down"
+}
+echo "export Window='<frame Обнаружены интерфейсы><hbox>" > /tmp/connect
+#модем
+if [ -a /dev/ttyUSB0 -o -a /dev/ttyACM0 ]; then
+	if [ "$(pidof wvdial)" ]; then
+	 F="Отключить"
+	 ACT=down_func
+	else
+	 F="Подключить"
+	 ACT=up_func
+	fi
+echo "<frame Обнаружен модем>
+ <pixmap>
+	<input file>/usr/share/pixmaps/3g.png</input>
+ </pixmap>
+ <button>
+	<label>$F</label>
+	<action function=\"exit\">$ACT modem</action>
+ </button>
+</frame>" >> /tmp/connect
+fi
+for IFACE in $(ls /sys/class/net)
+do
+ case $IFACE in
+#провод 
+  e*|u*) IMG=inet.png ;;
+  w*) IMG=wifi7.png ;;
+  *) continue ;;
+ esac
+ #[ "$(cat /sys/class/net/$IFACE/carrier)" = 1 ] || continue
+	if [ "$(cat /sys/class/net/$IFACE/operstate)" = down ]; then
+	 LAB="Подключить"
+	 ACT="up_func"
+	fi
+	if [ "$(cat /sys/class/net/$IFACE/operstate)" = up ]; then
+	 LAB="Отключить"
+	 ACT="down_func"
+	fi 
+echo "<vbox>
+<frame Проводной $IFACE>
+ <pixmap>
+	<input file>/usr/share/pixmaps/$IMG</input>
+ </pixmap>
+ <button>
+	<label>$LAB</label>
+	<action function=\"exit\">$ACT $IFACE</action>
+ </button></frame>
+</vbox>" >> /tmp/connect
+done
+
+echo "</hbox></frame>'" >> /tmp/connect
+. /tmp/connect
+eval $(/usr/sbin/gtkdialog -c --display=:0 --program "Window")
+
+if [ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ]; then
+ [ "$UP" = up ] || /sbin/ifconfig $IFACE down
+ exit
+fi
+##########
+$EXIT
+exit
