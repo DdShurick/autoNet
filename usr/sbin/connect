@@ -15,7 +15,7 @@ down_func () {
 [ -f /var/run/dhcpcd-${1}.pid ] && /usr/sbin/dhcpcd -k $1
 [ $(/bin/pidof wpa_supplicant) ] && /bin/kill $(/bin/pidof wpa_supplicant)
 [ $(/bin/pidof wvdial) ] && /bin/kill $(/bin/pidof wvdial)
-[ "$(cat /sys/class/net/$1/operstate)" = up ] && ifconfig $1 down
+[ "$(cat /sys/class/net/$1/operstate)" = down ] || ifconfig $1 down
 [ -h /sys/class/net/$1 ] && sed -i 's/on/off/' /etc/network-wizard/network/interfaces/$(cat /sys/class/net/$1/address|tr [a-z] [A-Z]).conf
 echo "$1 down"
 }
@@ -31,18 +31,14 @@ echo "export Window='<frame Обнаружены интерфейсы><hbox>" > 
 #модем
 if [ -a /dev/ttyUSB0 -o -a /dev/ttyACM0 ]; then
 	if [ "$(pidof wvdial)" ]; then
-	 F="Отключить"
-	 ACT=down_func
+	 ST=подключен
 	else
-	 F="Подключить"
+	 ST=отключен
 	 ACT=up_func
 	fi
-echo "<frame Обнаружен модем>
- <pixmap>
-	<input file>/usr/share/pixmaps/3g.png</input>
- </pixmap>
+echo "<frame Модем $ST>
  <button>
-	<label>$F</label>
+	<input file>/usr/share/pixmaps/3g.png</input>
 	<action function=\"exit\">$ACT modem</action>
  </button>
 </frame>" >> /tmp/connect
@@ -51,26 +47,22 @@ for IFACE in $(ls /sys/class/net)
 do
  case $IFACE in
 #провод 
-  e*|u*) IMG=inet.png ;;
-  w*) IMG=wifi7.png ;;
+  e*) IMG=inet.png ;;
+  u*|w*) IMG=wifi7.png ;;
   *) continue ;;
  esac
- #[ "$(cat /sys/class/net/$IFACE/carrier)" = 1 ] || continue
-	if [ "$(cat /sys/class/net/$IFACE/operstate)" = down ]; then
-	 LAB="Подключить"
-	 ACT="up_func"
-	fi
-	if [ "$(cat /sys/class/net/$IFACE/operstate)" = up ]; then
-	 LAB="Отключить"
-	 ACT="down_func"
-	fi 
+ 
+if [ "$(cat /sys/class/net/$IFACE/operstate)" = down ]; then
+ ACT="up_func"
+ ST=отключен
+else
+ ST=подключен
+fi
+
 echo "<vbox>
-<frame Проводной $IFACE>
- <pixmap>
-	<input file>/usr/share/pixmaps/$IMG</input>
- </pixmap>
+<frame $IFACE $ST>
  <button>
-	<label>$LAB</label>
+	<input file>/usr/share/pixmaps/$IMG</input>
 	<action function=\"exit\">$ACT $IFACE</action>
  </button></frame>
 </vbox>" >> /tmp/connect
