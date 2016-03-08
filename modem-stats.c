@@ -17,6 +17,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <stdlib.h>
 
 #define	USAGE		"Usage: %s [-c command] [-e end_string] device\n"
 
