@@ -3,7 +3,7 @@
 [ $1 ] || exit
 
 chk_on () {
-	grep on$ /etc/network-wizard/network/interfaces/$(cat /sys/class/net/$1/address|tr [a-z] [A-Z]).conf || exit
+	/bin/grep on$ /etc/network-wizard/network/interfaces/$(/bin/cat /sys/class/net/$1/address|/usr/bin/tr [a-z] [A-Z]).conf || exit
 }
 
 case $1 in
