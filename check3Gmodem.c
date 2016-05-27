@@ -3,7 +3,7 @@
 #include <dirent.h>
 #include <stdlib.h>
 
-char 	str[16]="", dev[16]="/dev/", mdir[42]="/sys/bus/usb-serial/devices/", cmd[48]="/bin/ln -s ", execmd[16]="wvdial ", pincmd[16]="AT+CPIN=", pinstr[4];
+char 	str[18]="", dev[16]="/dev/", mdir[42]="/sys/bus/usb-serial/devices/", cmd[48]="/bin/ln -s ", execmd[16]="wvdial ", pincmd[16]="AT+CPIN=", pinstr[4];
 FILE	*fd, *fp;
 DIR		*md;
 struct	dirent *entry;
@@ -16,14 +16,14 @@ void	close() {
 }
 
 void	ops() {
-	
+	sleep(1);
 	strcpy(str,"");
 	fputs("AT+COPS?\r\n",fd);
-	while (strstr(str,"COPS:")==NULL) {		
+	while (strstr(str,"OK")==NULL) {	
 		fgets (str,sizeof(str),fd);
-		if (strstr(str,": 0")!=NULL) close();
-		if (strstr(str,"COPS:")!=NULL) {
-			strcat(execmd,str+7);
+		if (strstr(str,": 0\n")!=NULL) close(); //No COPS
+		if (strstr(str,": 0,")!=NULL) {
+			strcat(execmd,str+12);
 			strcat(execmd,"\n");
 			printf(execmd);
 			system(execmd);
@@ -39,7 +39,7 @@ void	pin() {
 	strcat(pincmd,pinstr);
 	strcat(pincmd,"\r\n");
 	fputs(pincmd,fd);
-	sleep(1);
+	sleep(3);
 	ops();
 	close();
 }
