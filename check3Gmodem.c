@@ -3,8 +3,8 @@
 #include <dirent.h>
 #include <stdlib.h>
 
-char 	str[18]="", dev[16]="/dev/", mdir[42]="/sys/bus/usb-serial/devices/", cmd[48]="/bin/ln -s ", execmd[16]="wvdial ", pincmd[16]="AT+CPIN=", pinstr[4];
-FILE	*fd, *fp;
+char 	str[18]="", mnc[16]="", dev[16]="/dev/", mdir[42]="/sys/bus/usb-serial/devices/", cmd[48]="/bin/ln -s ", execmd[22]="wvdial ", pincmd[16]="AT+CPIN=", pinstr[4];
+FILE	*fd, *fc;
 DIR		*md;
 struct	dirent *entry;
 int n;
@@ -16,16 +16,21 @@ void	close() {
 }
 
 void	ops() {
+	
 	sleep(1);
 	strcpy(str,"");
 	fputs("AT+COPS?\r\n",fd);
-	while (strstr(str,"OK")==NULL) {	
+	while (strstr(str,"COPS:")==NULL) {	
 		fgets (str,sizeof(str),fd);
-		if (strstr(str,": 0\n")!=NULL) close(); //No COPS
+		if (strstr(str,": 0\n")!=NULL) close(); //No COPS, сделать уведомление
 		if (strstr(str,": 0,")!=NULL) {
-			strcat(execmd,str+12);
-			strcat(execmd,"\n");
+			fc=fopen("/etc/cops.lst","r");
+			while (strstr(mnc,str+12)==NULL) {
+				fgets (mnc,sizeof(mnc),fc);
+			}
+			strcat(execmd,mnc+6);
 			printf(execmd);
+			fclose(fc);
 			system(execmd);
 			close();
 		}
