@@ -2,9 +2,13 @@
 #internet up. DdShurick 04.05.2015 version 003
 [ $(/usr/bin/whoami) = root ] || exec loginroot $0
 
+msg () {
+	xpupsay "$1 отключен."
+}
+
 up_func () {
  case $1 in
-  modem) /lib/udev/wvdial.sh ;;
+  modem) /lib/udev/up3Gmodem $(basename $(/bin/readlink /dev/modem));;
   *) sed -i 's/off/on/' /etc/network-wizard/network/interfaces/$(cat /sys/class/net/$1/address|tr [a-z] [A-Z]).conf
    /lib/udev/net_up.sh $1 ;;
  esac
@@ -15,6 +19,7 @@ down_func () {
 [ -f /var/run/dhcpcd-${1}.pid ] && /usr/sbin/dhcpcd -k $1
 [ $(/bin/pidof wpa_supplicant) ] && /bin/kill $(/bin/pidof wpa_supplicant)
 [ $(/bin/pidof wvdial) ] && /bin/kill $(/bin/pidof wvdial)
+[ $(/bin/pidof pppd) ] && /bin/kill $(/bin/pidof pppd)
 [ "$(cat /sys/class/net/$1/operstate)" = down ] || ifconfig $1 down
 [ -h /sys/class/net/$1 ] && sed -i 's/on/off/' /etc/network-wizard/network/interfaces/$(cat /sys/class/net/$1/address|tr [a-z] [A-Z]).conf
 echo "$1 down"
@@ -32,6 +37,7 @@ echo "export Window='<frame Обнаружены интерфейсы><hbox>" > 
 if [ -a /dev/ttyUSB0 -o -a /dev/ttyACM0 ]; then
 	if [ "$(pidof wvdial)" ]; then
 	 ST=подключен
+	 ACT="msg"
 	else
 	 ST=отключен
 	 ACT=up_func
@@ -56,6 +62,7 @@ if [ "$(cat /sys/class/net/$IFACE/operstate)" = down ]; then
  ACT="up_func"
  ST=отключен
 else
+ ACT="msg"
  ST=подключен
 fi
 
