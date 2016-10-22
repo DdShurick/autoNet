@@ -1,0 +1,14 @@
+#!/bin/sh
+#DdShurick GPL 20.10.16
+#[ "$(ls /dev/cdc-wdm*)" ] && exit
+[ $1 ] || exit 1
+if [ "$(/bin/grep modem /etc/network-wizard/network/interfaces.lck)" ]; then
+	/bin/grep "modem on" /etc/network-wizard/network/interfaces.lck || exit
+else
+	echo "modem off" >> /etc/network-wizard/network/interfaces.lck
+	exit
+fi
+
+until [ -f /tmp/dsp ]; do /bin/sleep 1; done
+export DISPLAY=$(/bin/cat /tmp/dsp)
+exec /usr/sbin/up3Gmodem $1 >> /tmp/up3G.log

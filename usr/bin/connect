@@ -1,6 +1,6 @@
 #!/bin/sh
-#internet up. DdShurick 04.05.2015 version 003
-[ $(/usr/bin/whoami) = root ] || exec loginroot $0
+#internet up. DdShurick 28.06.2016 version 004
+[ $(/usr/bin/id -u) = 0 ] || exec loginroot $0
 
 msg () {
 	xpupsay "$1 отключен."
@@ -8,9 +8,18 @@ msg () {
 
 up_func () {
  case $1 in
-  modem) /lib/udev/up3Gmodem $(basename $(/bin/readlink /dev/modem));;
-  *) sed -i 's/off/on/' /etc/network-wizard/network/interfaces/$(cat /sys/class/net/$1/address|tr [a-z] [A-Z]).conf
-   /lib/udev/net_up.sh $1 ;;
+	modem)
+		sed -i "s/modem off/modem on/" /etc/network-wizard/network/interfaces.lck
+		/bin/ls -1 /dev/ttyUSB? | while read M
+		do
+			/lib/udev/up3Gmodem $(basename $M)
+		done
+	;;
+	*)
+		MCADDR=$(cat /sys/class/net/$1/address)
+		sed -i "s/$MCADDR off/$MCADDR on/"  
+		/lib/udev/upNet $1
+	;;
  esac
 echo $1 up
 }
@@ -21,20 +30,24 @@ down_func () {
 [ $(/bin/pidof wvdial) ] && /bin/kill $(/bin/pidof wvdial)
 [ $(/bin/pidof pppd) ] && /bin/kill $(/bin/pidof pppd)
 [ "$(cat /sys/class/net/$1/operstate)" = down ] || ifconfig $1 down
-[ -h /sys/class/net/$1 ] && sed -i 's/on/off/' /etc/network-wizard/network/interfaces/$(cat /sys/class/net/$1/address|tr [a-z] [A-Z]).conf
+if [ -h /sys/class/net/$1 ]; then
+	MCADDR=$(cat /sys/class/net/$1/address)
+	sed -i "s/$MCADDR on/$MCADDR off/" /etc/network-wizard/network/interfaces.lck
+fi
+sed -i "s/modem on/modem off/" /etc/network-wizard/network/interfaces.lck 
 echo "$1 down"
 }
 
 all_off () {
-ls /sys/class/net | grep -v lo | while read IFACE
+ls -1 /sys/class/net | grep -v lo | while read IFACE
 do
-down_func $IFACE
+	down_func $IFACE
 done 
 }
 
 echo "export Window='<frame Обнаружены интерфейсы><hbox>" > /tmp/connect
 #модем
-if [ -a /dev/ttyUSB0 -o -a /dev/ttyACM0 ]; then
+if [ -d /sys/bus/usb-serial/devices/ttyUSB0 -o -d /sys/bus/usb-serial/devices/ttyACM0 ]; then
 	if [ "$(pidof wvdial)" ]; then
 	 ST=подключен
 	 ACT="msg"
@@ -54,7 +67,7 @@ do
  case $IFACE in
 #провод 
   e*) IMG=inet.png ;;
-  u*|w*) IMG=wifi7.png ;;
+  u*|w*|r*) IMG=wifi7.png ;;
   *) continue ;;
  esac
  
