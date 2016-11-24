@@ -1,2 +1,1 @@
-ACTION=="add|change", SUBSYSTEM=="net", ATTR{operstate}=="down", RUN+="net_up.sh %k"
-
+ACTION=="add|change", SUBSYSTEM=="net", ATTR{operstate}=="down", RUN+="upNet %k"
