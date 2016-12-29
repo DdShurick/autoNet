@@ -22,7 +22,7 @@ if [ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" -o "$MYESSID" = "" ]; then
  exit 1
 fi
 [  "$EXIT" = "Подключить"  ] || exit 1
-KEY=$(grep "$MYESSID" -B 1 /tmp/iwlist | awk '/Encryption/ {print $2}')
+KEY=$(grep $MYESSID -B 1 /tmp/iwlist | awk '/Encryption/ {print $2}')
 if [ "$KEY" = "key:on" ]; then
 export Passw="<window title=\"Wi-Fi\"><vbox>
   <text><label>Введите пароль для $MYESSID</label></text>
@@ -36,7 +36,7 @@ eval $(gtkdialog3 -c --display=:0 --program "Passw")
 [ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
 [ "$MYPASSWD" ] || exit 1
 [  "$EXIT" = "Подключить"  ] || exit 1
-wpa_passphrase "$MYESSID" $MYPASSWD | grep -v '#psk' > /tmp/wpa.conf
+wpa_passphrase $MYESSID $MYPASSWD | grep -v '#psk' > /tmp/wpa.conf
 if [ "$(wpa_supplicant -v | awk '/wpa/ {print $2}' |  cut -b2,4)" -gt 20 ]; then
 wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf
 else
@@ -53,10 +53,10 @@ export Addr="<window title=\"Wi-Fi\"><vbox>
 eval $(gtkdialog3 -c --display=:0 --program "Addr") 
 [ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit
 [  "$EXIT" = "Сохранить"  ] || exit
-MYADDR=$(grep -B 5 $MYESSID /tmp/iwlist | awk '/Address/ {print $5}')
+MYADDR=$(grep -B 5 USSR /tmp/iwlist | awk '/Address/ {print $5}')
 cp /tmp/wpa.conf /etc/network-wizard/wireless/wpa_profiles/${MYADDR}.wpa.conf
  fi
 elif [ "$KEY" = "key:off" ]; then
-iwconfig $IFACE essid "$MYESSID" key off
+iwconfig $IFACE essid $MYESSID key off
 dhcpcd $IFACE
 fi

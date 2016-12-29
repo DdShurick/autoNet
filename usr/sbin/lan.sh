@@ -100,10 +100,20 @@ if [ "$(/bin/cat /sys/class/net/$IFACE/carrier)" = 1 ]; then
 	 /bin/echo 'GATEWAY=' >> ${CONFDIR}${HWCONF}
 	 /usr/bin/leafpad --display=:0 ${CONFDIR}${HWCONF}
 	else
-	 /bin/echo "dhcpcd $IFACE" >> /tmp/network.log
-	 /usr/sbin/dhcpcd $IFACE > /tmp/dhcpcd.log
-	 GATEWAY=$(/bin/awk '/offered/ {print $5}' /tmp/dhcpcd.log)
-	 check_ping
+	 /bin/echo "udhcpc $IFACE" >> /tmp/network.log
+	 IP=$(/sbin/udhcpc -i $IFACE | /bin/awk '/Lease/ {print $3}')
+	 /sbin/ifconfig $IFACE $IP
+	 /sbin/udhcpc -i $IFACE
+	 GATEWAY=$(/bin/grep $IFACE /proc/net/arp | /usr/bin/cut -f1 -d' ')
+		if [ "$GATEWAY" ]; then
+		 /sbin/route add default gw $GATEWAY
+		 /bin/echo "nameserver $GATEWAY">/etc/resolv.conf
+		 check_ping
+		else
+		 /bin/echo "No GATEWAY on $IFACE">>/tmp/network.log
+		 /sbin/ifconfig $IFACE down
+		 exit 1
+		fi
 	fi
 else
  /sbin/ifconfig $IFACE down
