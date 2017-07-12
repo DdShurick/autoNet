@@ -23,11 +23,11 @@ chk_on $1
 /usr/sbin/dhcpcd $1
 /usr/bin/curl http://192.168.0.1/goform/goform_set_cmd_process?goformId=CONNECT_NETWORK
 ;;
-wwan?)
-chk_on $1
-/bin/sleep 1
-/usr/sbin/dhcpcd $1
-;;
+#wwan?)
+#chk_on $1
+#/bin/sleep 1
+#/usr/sbin/dhcpcd $1
+#;;
 wlan?|ra?)
 chk_on $1
 exec /usr/sbin/wlan.sh $1

@@ -1,8 +1,8 @@
 #!/bin/sh
-#wi-fi up. DdShurick 27.01.15 version 003
-[ $(whoami) = root ] || exec loginroot wifi
+#wi-fi up. DdShurick 12.07.17 version 004
+[ $(id -u) = 0 ] || exec loginroot wifi
 IFACE=$(basename $(dirname /sys/class/net/*/phy80211))
-[ $(pidof dhcpcd) ] && dhcpcd -k $IFACE
+#[ $(pidof dhcpcd) ] && dhcpcd -k $IFACE
 [ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
 [ "$(cat /sys/class/net/$IFACE/operstate)" = "up" ] && UP=up || ifconfig $IFACE up
 sleep 2
@@ -18,13 +18,13 @@ export Window="<window title=\"Wi-Fi\"><vbox>
 eval $(gtkdialog3 -c --display=:0 --program "Window")
 
 if [ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" -o "$MYESSID" = "" ]; then
- [ "$UP" = up ] || ifconfig $IFACE down
- exit 1
+	[ "$UP" = up ] || ifconfig $IFACE down
+	exit 1
 fi
 [  "$EXIT" = "Подключить"  ] || exit 1
 KEY=$(grep $MYESSID -B 1 /tmp/iwlist | awk '/Encryption/ {print $2}')
 if [ "$KEY" = "key:on" ]; then
-export Passw="<window title=\"Wi-Fi\"><vbox>
+	export Passw="<window title=\"Wi-Fi\"><vbox>
   <text><label>Введите пароль для $MYESSID</label></text>
   <entry>
    <visible>password</visible>
@@ -32,31 +32,42 @@ export Passw="<window title=\"Wi-Fi\"><vbox>
   </entry>
   <button><label>Подключить</label></button>
 </vbox></window>"
-eval $(gtkdialog3 -c --display=:0 --program "Passw") 
-[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
-[ "$MYPASSWD" ] || exit 1
-[  "$EXIT" = "Подключить"  ] || exit 1
-wpa_passphrase $MYESSID $MYPASSWD | grep -v '#psk' > /tmp/wpa.conf
-if [ "$(wpa_supplicant -v | awk '/wpa/ {print $2}' |  cut -b2,4)" -gt 20 ]; then
-wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf
-else
-wpa_supplicant -B -D wext -i $IFACE -c /tmp/wpa.conf #для старых версий wpa_supplicant
-fi
-dhcpcd $IFACE
- if [ "$?" = 0 ]; then
-export Addr="<window title=\"Wi-Fi\"><vbox>
+	eval $(gtkdialog3 -c --display=:0 --program "Passw") 
+	[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
+	[ "$MYPASSWD" ] || exit 1
+	[  "$EXIT" = "Подключить"  ] || exit 1
+	wpa_passphrase "$MYESSID" "$MYPASSWD" | grep -v '#psk' > /tmp/wpa.conf
+#if [ "$(wpa_supplicant -v | awk '/wpa/ {print $2}' |  cut -b2,4)" -gt 20 ]; then
+	wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf
+#else
+#	wpa_supplicant -B -D wext -i $IFACE -c /tmp/wpa.conf #для старых версий wpa_supplicant
+#fi
+#dhcpcd $IFACE
+	IP=$(udhcpc -i $IFACE -n | /bin/awk '/Lease/ {print $3}')
+	ifconfig $IFACE $IP
+	udhcpc -i $IFACE
+	GATEWAY=$(grep $IFACE /proc/net/arp | cut -f1 -d' ')
+	if [ "$GATEWAY" ]; then
+		route add default gw $GATEWAY
+	else
+		ifconfig $IFACE down
+		exit 1
+	fi
+
+	if [ "$?" = 0 ]; then
+		export Addr="<window title=\"Wi-Fi\"><vbox>
   <text><label>Соединение с сетью ${MYESSID} установлено.</label></text>
   <pixmap><input file>/usr/share/pixmaps/wifi7.png</input></pixmap>
   <text><label>Сохранить настройки для сети ${MYESSID}?</label></text>
   <button><label>Сохранить</label></button>
 </vbox></window>"
-eval $(gtkdialog3 -c --display=:0 --program "Addr") 
-[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit
-[  "$EXIT" = "Сохранить"  ] || exit
-MYADDR=$(grep -B 5 USSR /tmp/iwlist | awk '/Address/ {print $5}')
-cp /tmp/wpa.conf /etc/network-wizard/wireless/wpa_profiles/${MYADDR}.wpa.conf
- fi
+		eval $(gtkdialog3 -c --display=:0 --program "Addr") 
+		[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit
+		[ "$EXIT" = "Сохранить"  ] || exit
+		MYADDR=$(grep -B 5 "$MYESSID" /tmp/iwlist | awk '/Address/ {print $5}')
+		cp /tmp/wpa.conf /etc/network-wizard/wireless/wpa_profiles/${MYADDR}.wpa.conf
+	fi
 elif [ "$KEY" = "key:off" ]; then
-iwconfig $IFACE essid $MYESSID key off
-dhcpcd $IFACE
+	iwconfig $IFACE essid "$MYESSID" key off
+	dhcpcd $IFACE
 fi

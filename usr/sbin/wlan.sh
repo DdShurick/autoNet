@@ -140,7 +140,7 @@ else
 	 /usr/bin/leafpad --display=:0 ${CONFDIR}${HWCONF}
 	else
 	 /bin/echo "udhcpc $IFACE" >> /tmp/network.log
-	 IP=$(/sbin/udhcpc -i $IFACE | /bin/awk '/Lease/ {print $3}')
+	 IP=$(/sbin/udhcpc -i $IFACE -n | /bin/awk '/Lease/ {print $3}')
 	 /sbin/ifconfig $IFACE $IP
 	 /sbin/udhcpc -i $IFACE
 	 GATEWAY=$(/bin/grep $IFACE /proc/net/arp | /usr/bin/cut -f1 -d' ')
