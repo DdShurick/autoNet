@@ -1,7 +1,28 @@
 #!/bin/sh
-#wi-fi up. DdShurick 12.07.17 version 004
+#wi-fi up. DdShurick 13.07.17 version 005
 [ $(id -u) = 0 ] || exec loginroot wifi
-IFACE=$(basename $(dirname /sys/class/net/*/phy80211))
+IFACE=$(basename $(dirname /sys/class/net/*/phy80211)) 2>/dev/null
+if [ "$IFACE" ] || 
+	if [ "$(echo $IFACE | wc -w)" != 1 ]; then
+		export Iface="<window title=\"Wi-Fi\"><vbox>
+		<text><label>Выберите интерфейс</label></text>
+		<list>
+		 <variable>IFACE</variable>
+		 $(echo "$IFACE" | sed 's/^/<item>/;s/$/<\/item>/')
+		</list>
+		<button><label>Подключить</label></button>
+		</vbox></window>"
+		eval $(gtkdialog3 -c --display=:0 --program "Iface")
+		[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
+	fi
+else
+	export Iface="<window title=\"Wi-Fi\"><vbox>
+	<text><label>Нет wi-fi интерфейсов</label></text>
+	<button><label>Выйти</label></button>
+	</vbox></window>"
+	eval $(gtkdialog3 -c --display=:0 --program "Iface")
+	exit 1
+fi
 #[ $(pidof dhcpcd) ] && dhcpcd -k $IFACE
 [ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
 [ "$(cat /sys/class/net/$IFACE/operstate)" = "up" ] && UP=up || ifconfig $IFACE up
@@ -53,7 +74,7 @@ if [ "$KEY" = "key:on" ]; then
 		ifconfig $IFACE down
 		exit 1
 	fi
-
+	echo "nameserwer $GATEWAY" > /etc/resolv.conf
 	if [ "$?" = 0 ]; then
 		export Addr="<window title=\"Wi-Fi\"><vbox>
   <text><label>Соединение с сетью ${MYESSID} установлено.</label></text>
