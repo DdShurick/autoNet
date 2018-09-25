@@ -1,0 +1,99 @@
+#!/bin/sh
+#wi-fi up. DdShurick 29.07.18 version 006
+. /usr/lib/upNet/libupNet
+[ $(id -u) = 0 ] || sudo=sudo
+
+ifdown () {
+	[ $(pidof wpa_supplicant) ] && $sudo kill $(pidof wpa_supplicant)
+	$sudo ifconfig $IFACE down
+	exit 1
+}
+
+IFACE=$(basename $(dirname /sys/class/net/*/phy80211)) 2>/dev/null
+if [ "$IFACE" ]; then
+	if [ "$(echo $IFACE | wc -w)" -gt 1 ]; then
+		export Iface="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
+		<text><label>Выберите интерфейс</label></text>
+		<tree>
+		 <variable>IFACE</variable>
+		 $(echo "$IFACE" | sed 's/^/<item>/;s/$/<\/item>/')
+		</tree>
+		<button><label>Подключить</label></button>
+		</vbox></window>"
+		eval $(gtkdialog -c --program "Iface")
+		[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
+	fi
+else
+	export Iface="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
+	<text><label>Нет wi-fi интерфейсов</label></text>
+	<button><label>Выйти</label></button>
+	</vbox></window>"
+	eval $(gtkdialog -c --program "Iface")
+	exit 1
+fi
+#[ $(pidof dhcpcd) ] && dhcpcd -k $IFACE
+[ $(pidof wpa_supplicant) ] && $sudo kill $(pidof wpa_supplicant)
+$sudo ifconfig $IFACE up
+sleep 2
+$sudo iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | $sudo tee /tmp/iwlist
+export Window="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
+  <text><label>Найдены сети Wi-Fi</label></text>
+  <tree>
+   <variable>MYESSID</variable>
+   $(awk -F \: '/ESSID/ {print "<item>"$2"</item>"}' /tmp/iwlist)
+  </tree>
+  <button><label>Подключить</label></button>
+ </vbox></window>"
+eval $(gtkdialog -c --program "Window")
+
+[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" -o "$MYESSID" = "" ] && ifdown
+[  "$EXIT" = "Подключить"  ] || ifdown
+
+KEY=$(grep $MYESSID -B 1 /tmp/iwlist | awk '/Encryption/ {print $2}')
+if [ "$KEY" = "key:on" ]; then
+	export Passw="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
+  <text><label>Введите пароль для $MYESSID</label></text>
+  <entry>
+   <visible>password</visible>
+   <variable>MYPASSWD</variable>
+  </entry>
+  <button><label>Подключить</label></button>
+</vbox></window>"
+	eval $(gtkdialog -c --program "Passw") 
+	[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && ifdown
+	[ "$MYPASSWD" ] || ifdown
+	[  "$EXIT" = "Подключить"  ] || ifdown
+	wpa_passphrase "$MYESSID" "$MYPASSWD" | grep -v '#psk' | $sudo tee /tmp/wpa.conf
+	if $sudo wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf; then 2>&1 | $sudo tee -a /var/log/${IFACE}.log
+		
+		dhcpc $($sudo udhcpc -i $IFACE -n 2>/dev/null) 
+		if [ $? = 0 ]; then
+			export Addr="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\">
+	<frame Сеть $MYESSID Ok>
+	<vbox>
+		<text><label>Сохранить ${MYESSID}?</label></text>
+		<pixmap><height>64</height>
+			<input file>/usr/share/pixmaps/wireless.svg</input>
+		</pixmap>
+		<hbox><button yes>
+			<action function=\"exit\">Сохранить</action>
+		</button>
+		<button no></button></hbox>
+	</vbox>
+	</frame>
+</window>"
+			eval $(gtkdialog -c --display=:1 --program "Addr") 
+			[ "$EXIT" = "No" -o  "$EXIT" = "abort" ] && ifdown
+			[ "$EXIT" = "Сохранить"  ] || ifdown
+			MYADDR=$(/usr/bin/grep -B 5 "$MYESSID" /tmp/iwtree | /usr/bin/awk '/Address/ {print $5}')
+			/usr/bin/cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
+		else
+			tunstatic $IFACE
+		fi
+	else
+		ifdown
+	fi
+elif [ "$KEY" = "key:off" ]; then
+	iwconfig $IFACE essid "$MYESSID" key off
+	dhcpc $($sudo udhcpc -i $IFACE -n 2>/dev/null) 
+fi

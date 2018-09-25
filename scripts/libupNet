@@ -1,0 +1,86 @@
+ifup () {
+	if [ "$(/usr/bin/cat /sys/class/net/$IFACE/operstate)" != "up" ]; then
+		$sudo /usr/bin/ifconfig $IFACE up && /usr/bin/echo "$0: $IFACE up" | $sudo /usr/bin/tee /var/log/${IFACE}.log
+		sleep 3
+	fi
+}
+
+check_ping () {
+	if /usr/bin/ping -c 1 -W 2 $GW ; then
+		if /usr/bin/ping -c 1 -W 2 8.8.8.8 ; then
+			if /usr/bin/ping -c 1 -W 2 google.ru ; then
+				$sudo /usr/bin/sed -i "s/$1 down/$1 up/" /etc/net/interfaces.lck
+				/usr/bin/echo "$0: Network Ok!" | $sudo /usr/bin/tee -a /var/log/${IFACE}.log
+				/usr/local/bin/ntf -i $IFACE "Network Ok!"
+			else
+				/usr/local/bin/ntf -i $IFACE "No resolv"
+			fi
+		else
+			$sudo /usr/bin/route del default
+			/usr/bin/echo "$0: Connect LAN" | $sudo /usr/bin/tee -a /var/log/${IFACE}.log
+			/usr/local/bin/ntf -i $IFACE "Connect only LAN"
+		fi
+	else
+		/usr/bin/echo "$0: No ping $GW" | $sudo /usr/bin/tee -a /var/log/${IFACE}.log
+		[ "$(/usr/bin/pidof wpa_supplicant)" ] && $sudo /usr/bin/kill $(/usr/bin/pidof wpa_supplicant)
+		sudo /usr/bin/route del default
+		$sudo /usr/bin/ifconfig "$IFACE" down
+		/usr/local/bin/ntf -e "No ping $GW"
+	fi
+}
+
+static () {
+	. ${CONFDIR}${HWCONFIGFILE}
+	if [ "$IP_ADDRESS" ]; then
+		$sudo /usr/bin/ifconfig "$IFACE" "$IP_ADDRESS"
+	else
+		/usr/bin/echo "$0: No IP in $HWCONFIGFILE" | $sudo /usr/bin/tee -a /var/log/$IFACE.log
+		/usr/local/bin/ntf -e $IFACE "Не указан IP"
+	fi
+	if [ "$DNS_SERVER1" -a "$DNS_SERVER1" != "0.0.0.0" ]; then
+		$sudo /usr/bin/mv -f /etc/resolv.conf /etc/resolv.conf.old
+		/usr/bin/echo "nameserver $DNS_SERVER1" | $sudo /usr/bin/tee /etc/resolv.conf
+		if [ "$DNS_SERVER2" -a "$DNS_SERVER2" != "0.0.0.0" ]; then
+			/usr/bin/echo "nameserver $DNS_SERVER2" | $sudo /usr/bin/tee -a /etc/resolv.conf
+		fi
+	else
+		/usr/bin/echo "$0: No DNS_SERVERS in $HWCONFIGFILE" | $sudo /usr/bin/tee -a /var/log/$IFACE.log
+		/usr/local/bin/ntf -e $IFACE "Не указан DNS_SERVER"
+	fi
+	if [ "$GW" ]; then
+		$sudo /usr/bin/route add -net default gw "$GW"
+		if [ $? -eq 0 ]; then #0=ok.
+			check_ping
+		else
+			/usr/bin/echo -e "$0: No ping $GW." | $sudo /usr/bin/tee -a /var/log/$IFACE.log
+			/usr/local/bin/ntf -e $IFACE "No ping $GW."
+		fi
+	else
+		/usr/bin/echo -e "$0: Не указан GW в $HWCONFIGFILE" | $sudo /usr/bin/tee -a /var/log/$IFACE.log
+		/usr/local/bin/ntf -e $IFACE "Не указан GW в $HWCONFIGFILE"
+	fi
+}
+
+dhcpc () {
+	echo "$@"
+	if [ "$2" ]; then
+		GW=$1; IP=$2
+	else
+		IP=$1	
+	fi
+	
+	$sudo /usr/bin/ifconfig $IFACE $IP
+	if [ "$GW" ]; then
+		$sudo /usr/bin/route add default gw $GW
+		/usr/bin/echo "nameserver $GW" | $sudo /usr/bin/tee /etc/resolv.conf
+		check_ping $HWADDR
+		return 0
+	elif [ "$ST" = 0 ]; then
+		return 0
+	else
+		$sudo /usr/bin/ifconfig $IFACE down
+		/usr/bin/echo "$0: No GW on $IFACE" | $sudo /usr/bin/tee -a /var/log/${IFACE}.log
+		/usr/local/bin/ntf -e "No GW on $IFACE"
+		return 1
+	fi
+}

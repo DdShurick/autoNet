@@ -1,0 +1,10 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Настроить PPPoE
+Icon=connect-red.xpm
+Comment=Настроить PPPoE
+Exec=pppoeconf
+Terminal=false
+Type=Application
+Categories=Settings;Network
+GenericName=pppoe

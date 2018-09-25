@@ -1,0 +1,2 @@
+ACTION=="add|change", SUBSYSTEM=="net", RUN+="upNet %k %s{address} %s{operstate}"
+ACTION=="add|change", SUBSYSTEM=="tty", SUBSYSTEMS=="usb", KERNEL=="ttyUSB?|ttyACM?", RUN+="check3Gtty %k"

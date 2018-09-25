@@ -1,0 +1,116 @@
+#!/bin/sh
+#DdShurick 25.08.18
+[ $(/usr/bin/id -u) = 0 ] || sudo=sudo
+. /usr/lib/upNet/libupNet
+
+if [ "$IFASE" ]; then
+	IFACE=eth0
+elif [ $(ls -1 /sys/class/net|grep ^e|wc -w) -gt 1 ]; then
+	IFACE=$(yad --list --column="Выберите интерфейс
+	для подключения PPPoE" $(ls -1 /sys/class/net|grep ^e)|tr -d \|)
+else
+	IFACE=eth0
+fi
+
+ifup
+
+CONFDIR="/etc/net/interfaces/"
+HWADDR=$(cat /sys/class/net/$IFACE/address)
+[ -f ${CONFDIR}${HWADDR}.pppoe.conf ] && . ${CONFDIR}${HWADDR}.pppoe.conf
+
+export PPPOECONF="<window icon-name=\"network\" title=\" PPPoE\" resizable=\"false\"><vbox>
+ <notebook labels=\"Авторизация| NIC и DNS | Прочее\">
+  <vbox>
+   <frame Имя соединения>
+    <entry activates_default=\"true\">
+     <default>\"$NAME\"</default>
+     <variable>NAME</variable>
+    </entry>
+   </frame>
+   <frame Логин>
+    <entry activates_default=\"true\">
+     <default>\"$LOGIN\"</default>
+     <variable>LOGIN</variable>
+    </entry>
+   </frame>
+   <frame Пароль>
+    <entry activates_default=\"true\">
+     <default>\"$PASSWD\"</default>
+     <variable>PASSWD</variable>
+    </entry>
+   </frame>
+  </vbox>
+  <vbox>
+   <text><label>Заполнять только при необходимости</label></text>
+   <frame Static IP>
+    <entry activates_default=\"true\">
+     <default>*</default>
+     <variable>IP</variable>
+    </entry>
+   </frame>
+   <frame DNS1>
+    <entry activates_default=\"true\">
+     <default>\"$DNS1\"</default>
+     <variable>DNS1</variable>
+    </entry>
+   </frame>
+   <frame DNS2>
+    <entry activates_default=\"true\">
+     <default>\"$DNS2\"</default>
+     <variable>DNS2</variable>
+    </entry>
+   </frame>
+  </vbox>
+  <vbox>
+   <text><label>Заполнять только при необходимости</label></text>
+   <frame Имя сервиса>
+   	<entry><variable>SN</variable></entry>
+   </frame>
+   <frame Имя концентратора>
+   	<entry><variable>AC</variable></entry>
+   </frame>
+  </vbox>
+ </notebook>
+ <hbox>
+  <text><label>Если настроили, нажмите</label></text>
+  <button ok></button>
+ </hbox>
+</vbox></window>
+"
+eval $(gtkdialog -c --display ":0" --program "PPPOECONF")
+
+[ "$EXIT" = "abort" ] && exit 1
+[ "$NAME" ] ||  MSG="Отсутствует: Имя_соединения"
+[ "$LOGIN" ] || MSG="$MSG Логин"
+[ "$PASSWD" ] || MSG="$MSG Пароль"
+[ "$IP" = '*' ] || check_ip_err "$IP"
+[ "$?" = 1 ] && MSG="$MSG Неверно: Static_IP"
+[ "$DNS1" = "" ] || check_ip_err "$DNS1"
+[ "$?" = 1 ] && MSG="$MSG Неверно: DNS1"
+[ "$DNS2" = ""  ] || check_ip_err "$DNS2"
+[ "$?" = 1 ] && MSG="$MSG Неверно: DNS2"
+[ "$DNS1" = "" -a "$DNS2" = "" ] && DNS="usepeerdns"
+[ "$SN" ] && DSN=" -S $SN"
+[ "$AC" ] && DAC=" -C $AC"
+if [ "$MSG" ]; then
+	ntf -e "$(echo $MSG | tr ' ' '\n')"
+	exit 1
+fi
+
+ifup
+ntf -i "Поиск PPPoE..." &
+
+if [ "$($sudo pppoe-discovery -I ${IFACE}${DSN}${DAC})" ]; then
+	echo "NAME=$NAME
+LOGIN=$LOGIN
+PASSWD=$PASSWD
+IP=$IP" | $sudo tee ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$DNS" = "usepeerdns" ] && echo "DNS=$DNS" | $sudo tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$DNS1" ] && echo "DNS1=$DNS1" | $sudo tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$DNS2" ] && echo "DNS2=$DNS2" | $sudo tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$SN" ] && echo "SN=\"rp_pppoe_service $SN\"" | $sudo tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$AC" ] && echo "AC=\"rp_pppoe_ac $AC\"" | $sudo tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	exec lan.sh $IFACE pppoeup
+else
+	ntf -e $IFACE "Нет доступа PPPoE"
+fi

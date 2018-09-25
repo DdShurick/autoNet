@@ -1,0 +1,29 @@
+#!/bin/sh
+#DdShurick GPL v2 17.07.2018
+[ "$1" ] || exit 0
+[ `id -u` = 0 ] && export DISPLAY=":0" || sudo=sudo
+ST="$(/usr/bin/grep $2 /etc/net/interfaces.lck | cut -f3 -d" ")"
+
+if [ "$ST" ]; then
+	[ "$ST" = "down" ] && exit 0
+else
+	/usr/bin/echo "$@" | $sudo tee -a /etc/net/interfaces.lck
+	[ "$(/usr/bin/echo $1 | /usr/bin/grep ^e[nt])" ] || exit 0
+fi
+
+case $1 in
+lo)
+	/usr/bin/ifconfig lo 127.0.0.1 up
+	/usr/bin/route add -net 127.0.0.0 netmask 255.0.0.0 lo
+;;
+e[nt]*)
+	/usr/bin/lan.sh $1 &
+;;
+wl*)
+	/usr/bin/wlan.sh $1 &
+;;
+ww*|usb?)
+	sleep 7
+	/usr/bin/lan.sh $1 &
+;;
+esac

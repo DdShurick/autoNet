@@ -1,0 +1,80 @@
+#!/bin/sh
+#DdShurick 24.09.18 GPL v2
+[ $(/usr/bin/id -u) = 0 ] || sudo=sudo
+CONFDIR="/etc/net/interfaces/"
+[ "$(echo $1 | egrep '^e|^w')" = "" ]; then
+	IFACE="$(yad --list --column="Выберите интерфейс" $(ls -1 /sys/class/net|egrep '^e|^w')|tr -d \|)"
+fi
+[ "$IFACE" = "" ] && exit 1
+HWADDR="$(cat /sys/class/net/$IFACE/address)"
+
+check_ip_err () {
+	echo "$1" | grep -Eq '^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$'
+}
+
+check_ip () {
+	ST=0
+	check_ip_err "$IP_ADDRESS"
+	if [ $? != 0 ]; then
+		IP_ADDRESS="0.0.0.0"; ST=" IP_ADDRESS"; fi
+	check_ip_err "$DNS1"
+	if [ $? != 0 ]; then	
+		DNS1="8.8.8.8"; ST="${ST} DNS1"; fi
+	check_ip_err "$DNS2"
+	if [ $? != 0 ]; then	
+		DNS2="8.8.8.8"; ST="${ST} DNS2"; fi
+	check_ip_err "$GW"
+	if [ $? != 0 ]; then
+		GW="0.0.0.0"; ST="${ST} GATEWAY"; fi
+}
+
+[ -s ${CONFDIR}${HWADDR}.conf ] && . ${CONFDIR}${HWADDR}.conf
+check_ip
+
+export STATIC="<window icon-name=\"network\" title=\"Static IP\" resizable=\"false\">
+ <vbox>
+  <text><label>Укажите настройки сети.</label></text>
+  <frame IP вашего компьютера>
+   <entry activates_default=\"true\">
+    <default>$IP_ADDRESS</default>
+    <variable>IP_ADDRESS</variable>
+   </entry>
+  </frame>
+  <frame Серверы DNS>
+   <entry activates_default=\"true\">
+    <default>$DNS1</default>
+    <variable>DNS1</variable>
+   </entry>
+   <entry activates_default=\"true\">
+    <default>$DNS2</default>
+    <variable>DNS2</variable>
+   </entry>
+  </frame>
+  <frame Интернет шлюз>
+   <entry activates_default=\"true\">
+    <default>$GW</default>
+   	<variable>GW</variable>
+   </entry>
+  </frame>
+  <hbox>
+   <text><label>Не уверен - спроси админа.</label></text>
+   <button ok></button>
+  </hbox>
+ </vbox>
+</window>
+"
+eval $(/usr/bin/gtkdialog -c --program "STATIC")
+
+[ "$EXIT" = "abort" ] && exit 0
+
+check_ip
+if [ "$ST" = 0 ]; then
+	echo "IP_ADDRESS=\"$IP_ADDRESS\"
+DNS1=\"$DNS1\"
+DNS2=\"$DNS2\"
+GW=\"$GW\"" | $sudo /usr/bin/tee ${CONFDIR}${HWADDR}.conf
+	/usr/lib/udev/upNet $IFACE $HWADDR up
+else
+	echo "Неправильно указан: $ST"
+	ntf -e "Неправильно:" "$ST."
+fi

@@ -1,0 +1,94 @@
+#!/bin/bash
+#internet up. DdShurick 24.07.2018, GPL v2
+
+[ $(id -u) = 0 ] && DISPLAY=":0" || sudo=sudo
+
+up_func () {
+ case $1 in
+	modem)
+		$sudo sed -i "s/modem down/modem up/" /etc/net/interfaces.lck
+		$sudo up3Gmodem
+	;;
+	*)
+		HWADDR=$(cat /sys/class/net/$1/address) || return 1
+		$sudo sed -i "s/$HWADDR down/$HWADDR up/" /etc/net/interfaces.lck
+		/usr/lib/udev/upNet $1 $HWADDR up
+	;;
+ esac
+}
+
+down_func () {
+[ -f /var/run/dhcpcd-${1}.pid ] && $sudo dhcpcd -k $1
+[ $(pidof wpa_supplicant) ] && $sudo kill $(pidof wpa_supplicant)
+[ $(pidof wvdial) ] && $sudo kill $(pidof wvdial)
+[ $(pidof pppd) ] && $sudo killall pppd
+$sudo ifconfig $1 down
+if [ -h /sys/class/net/$1 ]; then
+	HWADDR=$(cat /sys/class/net/$1/address) || return 1
+	$sudo sed -i "s/$HWADDR up/$HWADDR down/" /etc/net/interfaces.lck
+fi
+$sudo sed -i "s/modem up/modem down/" /etc/net/interfaces.lck 
+echo "$1 down"
+}
+
+all_off () {
+$sudo route del default
+ls -1 /sys/class/net | grep -v lo | while read IFACE
+do
+	if [ "${IFACE:0:4}" = "wlan" ]; then
+		down_func $IFACE
+		continue
+	fi
+	[ "$(cat /sys/class/net/$IFACE/operstate | cut -b1)" = "u" ] && down_func $IFACE
+done 
+}
+
+echo "export Window='<window icon-name=\"network\" title=\"WWW\" resizable=\"false\"><hbox>" | tee /tmp/connect
+#модем
+if [ -d /sys/bus/usb-serial/devices/ttyUSB0 -o -d /sys/bus/usb-serial/devices/ttyACM0 ]; then
+	if [ "$(pidof pppd)" ]; then
+	 ST="подключен"; ACT="down_func"; UD="on"
+	else
+	 ST="отключен"; ACT="up_func"; UD="off"
+	fi
+echo "<frame Модем $ST>
+ <button>
+ 	<height>100</height>
+ 	<input file>/usr/share/pixmaps/usb_modem_${UD}.svg</input>
+	<action function=\"exit\">$ACT modem</action>
+ </button>
+</frame>" | $sudo tee -a /tmp/connect
+fi
+
+for IFACE in $(ls -1 /sys/class/net)
+do
+ case $IFACE in
+  e*) IMG=network_ ;;
+  wl*|r*) IMG=wireless_ ;;
+  u*|ww*) IMG=usb_modem_ ;;
+  *) continue ;;
+ esac
+ 
+if [ "$(cat /sys/class/net/$IFACE/operstate)" = down ]; then
+ ACT="up_func"; ST="отключен"; UD="off"
+else
+ ACT="down_func"; ST="подключен"; UD="on"
+fi
+
+echo "<frame $IFACE $ST>
+ <button>
+ 	<height>100</height>
+ 	<input file>/usr/share/pixmaps/${IMG}${UD}.svg</input>
+	<action function=\"exit\">$ACT $IFACE</action>
+ </button>
+</frame>" | $sudo tee -a /tmp/connect
+done
+
+echo "</hbox></window>'" | $sudo tee -a /tmp/connect
+. /tmp/connect
+eval $(gtkdialog -c --display=`cat /tmp/dsp` --program "Window")
+
+[ "$EXIT" = "abort" ] && exit
+[ "${EXIT:0:3}" = "up_" ] && all_off
+$EXIT
+exit
