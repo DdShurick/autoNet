@@ -52,4 +52,4 @@ install:
 	$(INSTALL) -D -m 644 applications/wifi.desktop $(DESTDIR)$(datarootdir)/applications/wifi.desktop
 
 clean:
-	rm up3Gmodem ussd check3Gttywifi.desktop
+	rm up3Gmodem ussd check3Gtty
