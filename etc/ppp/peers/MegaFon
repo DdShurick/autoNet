@@ -1,0 +1,19 @@
+lcp-echo-failure 0
+lcp-echo-interval 0
+connect /etc/ppp/chatscripts/25002.chat #Использовать этот скрипт соединения
+/dev/modem	# Устройство модема
+115200			# Скорость соединения
+local
+noipdefault		# Использовать локальный IP и IP-шлюза выдаваемые провайдером
+ipcp-accept-local		
+defaultroute	# Создать при соединении маршрут по уполчанию на IP шлюза провайдера
+#persist
+novj
+nobsdcomp
+novjccomp
+nopcomp
+noaccomp
+noauth
+nodetach
+usepeerdns		# Использовать IP DNS серверов, выдаваемых провайдером
+user gdata

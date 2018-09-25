@@ -1,0 +1,19 @@
+hide-password
+connect /etc/ppp/chatscripts/25001.chat #Использовать этот скрипт соединения
+/dev/modem	# Устройство модема
+115200			# Скорость соединения
+noauth
+noipdefault		# Использовать локальный IP и IP-шлюза выдаваемые провайдером
+ipcp-accept-local		
+defaultroute	# Создать при соединении маршрут по уполчанию на IP шлюза провайдера
+#persist
+novj
+nobsdcomp
+novjccomp
+nopcomp
+noaccomp
+remotename MTS
+ipparam MTS
+nodetach
+usepeerdns		# Использовать IP DNS серверов, выдаваемых провайдером
+user mts

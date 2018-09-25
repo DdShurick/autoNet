@@ -1,0 +1,11 @@
+exec chat -vS \
+    '' \rAT \
+    TIMEOUT 12 \
+    OK ATH \
+    OK ATE1 \
+    OK 'AT+CGDCONT=1,"IP","internet.tele2.ru"' \
+    OK ATD*99# \
+    TIMEOUT 22 \
+    SAY "\nWaitinf for connect.....\n" \
+    CONNECT "" \
+    SAY "\nConnected!\n"
