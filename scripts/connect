@@ -1,5 +1,5 @@
 #!/bin/bash
-#internet up. DdShurick 24.07.2018, GPL v2
+#internet up. DdShurick 26.09.2018, GPL v2
 
 [ $(id -u) = 0 ] && DISPLAY=":0" || sudo=sudo
 
@@ -43,7 +43,7 @@ do
 done 
 }
 
-echo "export Window='<window icon-name=\"network\" title=\"WWW\" resizable=\"false\"><hbox>" | tee /tmp/connect
+echo "export Window='<window icon-name=\"network\" title=\"WWW\" resizable=\"false\"><vbox><hbox>" | tee /tmp/connect
 #модем
 if [ -d /sys/bus/usb-serial/devices/ttyUSB0 -o -d /sys/bus/usb-serial/devices/ttyACM0 ]; then
 	if [ "$(pidof pppd)" ]; then
@@ -84,11 +84,20 @@ echo "<frame $IFACE $ST>
 </frame>" | $sudo tee -a /tmp/connect
 done
 
-echo "</hbox></window>'" | $sudo tee -a /tmp/connect
+echo "</hbox>
+<frame Как производить настройку сети?>
+ <checkbox>
+ 	<label>Да - авто, нет - вручную</label>
+ 	<default>true</default>
+ 	<variable>DHCP</variable>
+ </checkbox>
+</frame>
+</vbox></window>'" | $sudo tee -a /tmp/connect
 . /tmp/connect
-eval $(gtkdialog -c --display=`cat /tmp/dsp` --program "Window")
+eval $(gtkdialog -c --program "Window")
 
 [ "$EXIT" = "abort" ] && exit
+[ "$DHCP" = "false" ] && tunstatic $(echo "$EXIT"|cut -f2 -d' ')
 [ "${EXIT:0:3}" = "up_" ] && all_off
 $EXIT
 exit

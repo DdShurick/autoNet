@@ -2,8 +2,10 @@
 #DdShurick 24.09.18 GPL v2
 [ $(/usr/bin/id -u) = 0 ] || sudo=sudo
 CONFDIR="/etc/net/interfaces/"
-[ "$(echo $1 | egrep '^e|^w')" = "" ]; then
+if [ "$(echo $1 | egrep '^e|^w')" = "" ]; then
 	IFACE="$(yad --list --column="Выберите интерфейс" $(ls -1 /sys/class/net|egrep '^e|^w')|tr -d \|)"
+else
+	IFACE=$1
 fi
 [ "$IFACE" = "" ] && exit 1
 HWADDR="$(cat /sys/class/net/$IFACE/address)"
