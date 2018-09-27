@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <gtk/gtk.h>
 
-char 	str[24]="", cops[24]="", cmd[36]="exec /usr/sbin/pppd call ", pincmd[16]="AT+CPIN=";//, mdir[42]="/sys/bus/usb-serial/devices/", lncmd[48]="/bin/ln -sf ", traycmd[34]="exec /usr/bin/tray3Gcsq ", dev[16]="/dev/", mnc[16]=""; cmd[36]="exec /usr/bin/wvdial "
+char 	str[24]="", cops[24]="", cmd[36]="exec /usr/sbin/pppd call ", pincmd[16]="AT+CPIN=";
 const gchar *pin;
 FILE	*fd, *fl;
 
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 	
 	char	route[5];
 	FILE	*fr;
-	GtkWidget *window, *vbox, *entry, *upperLabel;
+	GtkWidget *window, *entry;
 	
 	fl = fopen("/var/log/up3G.log","w");
 	
@@ -90,26 +90,22 @@ int main(int argc, char **argv) {
 		
 		gtk_init (&argc, &argv);
 
-		window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+		window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 		gtk_window_set_position(GTK_WINDOW(window),GTK_WIN_POS_CENTER);
-		gtk_container_set_border_width (GTK_CONTAINER (window), 7);
-		g_signal_connect(G_OBJECT(window), "delete_event", G_CALLBACK(gtk_main_quit), NULL);
-
-		vbox = gtk_vbox_new (FALSE, 3);
-		gtk_container_add (GTK_CONTAINER (window), vbox);
-
-		upperLabel = gtk_label_new ("Введите PIN:");
-		gtk_box_pack_start (GTK_BOX (vbox), upperLabel, TRUE, TRUE, 0);
-
-		entry = gtk_entry_new_with_max_length (4);
+		gtk_window_set_resizable(GTK_WINDOW(window),FALSE);
+		gtk_window_set_title(GTK_WINDOW(window), "Введите PIN:");
+		
+		entry = gtk_entry_new();
 		gtk_entry_set_visibility(GTK_ENTRY(entry),FALSE);// password mode
-		gtk_signal_connect(GTK_OBJECT(entry), "activate", GTK_SIGNAL_FUNC(enter_callback), entry);
-
-		gtk_box_pack_start (GTK_BOX (vbox), entry, TRUE, TRUE, 0);
-		gtk_entry_set_width_chars (GTK_ENTRY (entry), 4);
-
+		gtk_entry_set_max_length(GTK_ENTRY(entry),4);
+		g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(enter_callback), entry);
+		
+		gtk_container_add (GTK_CONTAINER (window), entry);
+		gtk_container_set_border_width (GTK_CONTAINER (window), 7);
+		
 		gtk_widget_show_all (window);
-
+		g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(gtk_main_quit), NULL);
+		
 		gtk_main ();
 	}	
 	fclose(fd);

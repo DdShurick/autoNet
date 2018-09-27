@@ -62,54 +62,29 @@ int main(int argc, char **argv) {
 	pid_t pid;
 	setlocale(LC_ALL, "ru_RU.UTF-8");
 	int c, e=0, i, n, p, l, arg=0;
-	char str[11]="", str1[5]="", buf1[90]="", sussd[12]="", a[2], b[2], cmd[32]="AT+CUSD=1,";//str[9]
+	char str[11]="", str1[5]="", buf1[90]="", sussd[12]="", a[2], b[2], cmd[32]="AT+CUSD=1,";
 	
-	
-//получаем значения ключей	
-/*	while((arg=getopt(argc,argv,"c:i:nhv")) != -1) {
-		switch (arg) {
-			case 'n': e=1; break;
-			case 'c': strcat(ussd,optarg); break;
-			case 'i': strcat(dev,optarg);  break;
-			case 'h': USAGE(); break;
-			case 'v': VERSION(); break;
-		}
-	}
-	if((strstr(ussd,"*"))==NULL) { printf("Not specified ussd command\n"); USAGE(); exit(1); }
-	if((strstr(dev,"tty"))==NULL) { printf("Not specified device command\n"); USAGE(); exit(1); }
-	printf("%s %s %d\n",dev,ussd,e);
-//	strcat(ussd,argv[1]);
-//	strcat(dev,argv[2]);*/
-	
-	GtkWidget *window, *vbox, *entry, *upperLabel;
+	GtkWidget *window, *entry;
 
 	gtk_init (&argc, &argv);
 
-	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_position(GTK_WINDOW(window),GTK_WIN_POS_CENTER);
-	gtk_container_set_border_width (GTK_CONTAINER (window), 7);
-	g_signal_connect(G_OBJECT(window), "delete_event", G_CALLBACK(gtk_main_quit), NULL);
-
-	vbox = gtk_vbox_new (FALSE, 3);
-	gtk_container_add (GTK_CONTAINER (window), vbox);
-
-	upperLabel = gtk_label_new ("USSD + Enter");
-	gtk_box_pack_start (GTK_BOX (vbox), upperLabel, TRUE, TRUE, 0);
-
-	entry = gtk_entry_new_with_max_length (9);
+	gtk_window_set_resizable(GTK_WINDOW(window),FALSE);
+	gtk_window_set_title(GTK_WINDOW(window), "USSD --> Enter");
 	
+	entry = gtk_entry_new();
 	gtk_entry_set_visibility(GTK_ENTRY(entry),TRUE);
-	gtk_signal_connect(GTK_OBJECT(entry), "activate", GTK_SIGNAL_FUNC(enter_callback), entry);
-
-	gtk_box_pack_start (GTK_BOX (vbox), entry, TRUE, TRUE, 0);
-	gtk_entry_set_width_chars (GTK_ENTRY (entry), 4);
-
-	gtk_widget_show_all (window);
-
-	gtk_main ();
+	gtk_entry_set_max_length(GTK_ENTRY(entry),0);
+	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(enter_callback), entry);
 	
-//	printf("%s\n", ussd);
-//	exit(0);
+	gtk_container_add (GTK_CONTAINER (window), entry);
+	gtk_container_set_border_width (GTK_CONTAINER (window), 7);
+	
+	gtk_widget_show_all (window);
+	g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(gtk_main_quit), NULL);
+	
+	gtk_main ();
 
 	if(e==0) {
 		p=strlen(ussd)-1;
