@@ -5,9 +5,9 @@ INSTALL = /usr/bin/install
 STRIP = /usr/bin/strip
 prefix = /usr
 bindir = ${prefix}/bin
-sbindir = ${prefix}/sbin
+sbindir = ${prefix}/bin
 datarootdir = ${prefix}/share
-libdir = /lib
+libdir = ${prefix}/lib
 sysconfdir = /etc
 
 all:
