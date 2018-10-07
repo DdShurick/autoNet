@@ -1,5 +1,5 @@
 #!/bin/sh
-#wi-fi up. DdShurick 29.07.18 version 006
+#wi-fi up. DdShurick 07.10.2018
 . /usr/lib/upNet/libupNet
 [ $(id -u) = 0 ] || sudo=sudo
 
@@ -24,11 +24,7 @@ if [ "$IFACE" ]; then
 		[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
 	fi
 else
-	export Iface="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
-	<text><label>Нет wi-fi интерфейсов</label></text>
-	<button><label>Выйти</label></button>
-	</vbox></window>"
-	eval $(gtkdialog -c --program "Iface")
+	ntf -e "Нет wi-fi интерфейсов" &
 	exit 1
 fi
 #[ $(pidof dhcpcd) ] && dhcpcd -k $IFACE
@@ -86,7 +82,7 @@ if [ "$KEY" = "key:on" ]; then
 			[ "$EXIT" = "No" -o  "$EXIT" = "abort" ] && ifdown
 			[ "$EXIT" = "Сохранить"  ] || ifdown
 			MYADDR=$(/usr/bin/grep -B 5 "$MYESSID" /tmp/iwtree | /usr/bin/awk '/Address/ {print $5}')
-			/usr/bin/cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
+			$sudo cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
 		else
 			tunstatic $IFACE
 		fi
@@ -94,6 +90,6 @@ if [ "$KEY" = "key:on" ]; then
 		ifdown
 	fi
 elif [ "$KEY" = "key:off" ]; then
-	iwconfig $IFACE essid "$MYESSID" key off
+	$sudo iwconfig $IFACE essid "$MYESSID" key off
 	dhcpc $($sudo udhcpc -i $IFACE -n 2>/dev/null) 
 fi

@@ -43,7 +43,7 @@ do
 done 
 }
 
-echo "export Window='<window icon-name=\"network\" title=\"WWW\" resizable=\"false\"><vbox><hbox>" | tee /tmp/connect
+echo "export Window='<window icon-name=\"network\" title=\"AutoNet\" resizable=\"false\"><vbox><hbox>" | tee /tmp/connect
 #модем
 if [ -d /sys/bus/usb-serial/devices/ttyUSB0 -o -d /sys/bus/usb-serial/devices/ttyACM0 ]; then
 	if [ "$(pidof pppd)" ]; then

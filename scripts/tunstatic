@@ -3,7 +3,7 @@
 [ $(/usr/bin/id -u) = 0 ] || sudo=sudo
 CONFDIR="/etc/net/interfaces/"
 if [ "$(echo $1 | egrep '^e|^w')" = "" ]; then
-	IFACE="$(yad --list --column="Выберите интерфейс" $(ls -1 /sys/class/net|egrep '^e|^w')|tr -d \|)"
+	IFACE="`ntf -l  "$(ls -1 /sys/class/net|egrep '^e|^w')" "Выберите интерфейс"`"
 else
 	IFACE=$1
 fi
@@ -59,7 +59,7 @@ export STATIC="<window icon-name=\"network\" title=\"Static IP\" resizable=\"fal
    </entry>
   </frame>
   <hbox>
-   <text><label>Не уверен - спроси админа.</label></text>
+   <button cancel></button>
    <button ok></button>
   </hbox>
  </vbox>
@@ -67,7 +67,7 @@ export STATIC="<window icon-name=\"network\" title=\"Static IP\" resizable=\"fal
 "
 eval $(/usr/bin/gtkdialog -c --program "STATIC")
 
-[ "$EXIT" = "abort" ] && exit 0
+[ "$EXIT" = "Cancel" -o "$EXIT" = "abort" ] && exit 0
 
 check_ip
 if [ "$ST" = 0 ]; then
