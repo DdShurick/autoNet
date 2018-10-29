@@ -78,7 +78,7 @@ if [ "$KEY" = "key:on" ]; then
 	</vbox>
 	</frame>
 </window>"
-			eval $(gtkdialog -c --display=:1 --program "Addr") 
+			eval $(gtkdialog -c --program "Addr") 
 			[ "$EXIT" = "No" -o  "$EXIT" = "abort" ] && ifdown
 			[ "$EXIT" = "Сохранить"  ] || ifdown
 			MYADDR=$(/usr/bin/grep -B 5 "$MYESSID" /tmp/iwtree | /usr/bin/awk '/Address/ {print $5}')
