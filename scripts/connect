@@ -12,7 +12,7 @@ up_func () {
 	*)
 		HWADDR=$(cat /sys/class/net/$1/address) || return 1
 		$sudo sed -i "s/$HWADDR down/$HWADDR up/" /etc/net/interfaces.lck
-		/usr/lib/udev/upNet $1 $HWADDR up
+		/lib/udev/upNet $1 $HWADDR up
 	;;
  esac
 }

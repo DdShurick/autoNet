@@ -5,7 +5,7 @@ INSTALL = /usr/bin/install
 STRIP = /usr/bin/strip
 prefix = /usr
 bindir = ${prefix}/bin
-sbindir = ${prefix}/bin
+sbindir = ${prefix}/sbin
 datarootdir = ${prefix}/share
 libdir = ${prefix}/lib
 sysconfdir = /etc
@@ -21,7 +21,7 @@ install:
 	$(INSTALL) -D -m 755 ussd $(DESTDIR)$(bindir)/ussd
 	$(STRIP) $(DESTDIR)$(bindir)/ussd
 	$(INSTALL) -D -m 755 check3Gtty $(DESTDIR)/lib/udev/check3Gtty
-	$(STRIP) $(DESTDIR)$(libdir)/udev/check3Gtty
+	$(STRIP) $(DESTDIR)/lib/udev/check3Gtty
 	
 	$(INSTALL) -D -m 755 scripts/connect $(DESTDIR)$(bindir)/connect
 	$(INSTALL) -D -m 755 scripts/pppoeconf $(DESTDIR)$(bindir)/pppoeconf
