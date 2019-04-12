@@ -1,13 +1,13 @@
 #!/bin/sh
-#DdShurick 24.09.18 GPL v2
-[ $(/usr/bin/id -u) = 0 ] || sudo=sudo
+#DdShurick 26.09.18 GPL v2
+DISPLAY="$(cat /tmp/dsp)"
 CONFDIR="/etc/net/interfaces/"
 if [ "$(echo $1 | egrep '^e|^w')" = "" ]; then
-	IFACE="`ntf -l  "$(ls -1 /sys/class/net|egrep '^e|^w')" "Выберите интерфейс"`"
+	IFACE="$(yad --list --column="Выберите интерфейс" $(ls -1 /sys/class/net|egrep '^e|^w')|tr -d \|)"
 else
 	IFACE=$1
 fi
-[ "$IFACE" = "" ] && exit 1
+[ "$IFACE" ] || exit 1
 HWADDR="$(cat /sys/class/net/$IFACE/address)"
 
 check_ip_err () {
@@ -33,7 +33,7 @@ check_ip () {
 [ -s ${CONFDIR}${HWADDR}.conf ] && . ${CONFDIR}${HWADDR}.conf
 check_ip
 
-export STATIC="<window icon-name=\"network\" title=\"Static IP\" resizable=\"false\">
+export STATIC="<window icon-name=\"network\" title=\"Static IP\">
  <vbox>
   <text><label>Укажите настройки сети.</label></text>
   <frame IP вашего компьютера>
@@ -59,7 +59,7 @@ export STATIC="<window icon-name=\"network\" title=\"Static IP\" resizable=\"fal
    </entry>
   </frame>
   <hbox>
-   <button cancel></button>
+   <text><label>Не уверен - спроси админа.</label></text>
    <button ok></button>
   </hbox>
  </vbox>
@@ -67,16 +67,19 @@ export STATIC="<window icon-name=\"network\" title=\"Static IP\" resizable=\"fal
 "
 eval $(/usr/bin/gtkdialog -c --program "STATIC")
 
-[ "$EXIT" = "Cancel" -o "$EXIT" = "abort" ] && exit 0
+[ "$EXIT" = "abort" ] && exit
 
 check_ip
 if [ "$ST" = 0 ]; then
 	echo "IP_ADDRESS=\"$IP_ADDRESS\"
 DNS1=\"$DNS1\"
 DNS2=\"$DNS2\"
-GW=\"$GW\"" | $sudo /usr/bin/tee ${CONFDIR}${HWADDR}.conf
-	/usr/lib/udev/upNet $IFACE $HWADDR up
+GW=\"$GW\"" | /usr/bin/tee ${CONFDIR}${HWADDR}.conf
 else
-	echo "Неправильно указан: $ST"
-	ntf -e "Неправильно:" "$ST."
+	 echo "Неправильно указан: $ST"
+export ERROR="<window icon-name=\"network\" title=\"Ошибка\">
+  <text><label>Неправильно: $ST.</label></text>
+</window>
+"
+/usr/bin/gtkdialog -c --program "ERROR" 
 fi

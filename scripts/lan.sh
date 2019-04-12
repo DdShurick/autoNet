@@ -1,24 +1,26 @@
-#!/bin/ash
-#DdShurick 25.08.18
-[ $1 ] && IFACE=$1 || exit 1
+#!/bin/sh
+#DdShurick 12.04.19
+if [ $(/usr/bin/id -u) != 0 ]; then echo "you must be root"; exit 1; fi
+if [ $1 ]; then IFACE=$1; else echo "Не указан интерфейс"; exit 1; fi
+[ "$(/bin/cat /sys/class/net/$IFACE/operstate)" = "up" ] && exit 0
+[ "$(uname -m)" = "x86_64" -a -d /usr/lib64 ] && m=64
 
 case $IFACE in
 e[nt]*) IMG="/usr/share/pixmaps/network_" ;;
 ww*|usb?) IMG="/usr/share/pixmaps/usb_modem_" ;;
 esac
 
-[ `/usr/bin/id -u` = 0 ] || sudo=sudo
-. /usr/lib/upNet/libupNet
+. /usr/lib${m}/upNet/libupNet
 CONFDIR="/etc/net/interfaces/"
-HWADDR=$(/usr/bin/cat /sys/class/net/$IFACE/address)
+HWADDR=$(/bin/cat /sys/class/net/$IFACE/address)
 
 pppoeup () {
 if [ -f ${CONFDIR}${HWADDR}.pppoe.conf ]; then
 	. ${CONFDIR}${HWADDR}.pppoe.conf
-	$sudo /usr/bin/modprobe pppoe
-	[ "$($sudo /usr/bin/grep $LOGIN /etc/ppp/chap-secrets)" ] || /usr/bin/echo "$LOGIN	*	$PASSWD	$IP" | $sudo /usr/bin/tee -a /etc/ppp/chap-secrets
-	[ "$($sudo /usr/bin/grep $LOGIN /etc/ppp/pap-secrets)" ] || /usr/bin/echo "$LOGIN	*	$PASSWD	$IP" | $sudo  /usr/bin/tee -a /etc/ppp/pap-secrets
-	/usr/bin/echo "plugin rp-pppoe.so
+	/sbin/modprobe pppoe
+	[ "$(/bin/grep $LOGIN /etc/ppp/chap-secrets)" ] || /bin/echo "$LOGIN	*	$PASSWD	$IP" | /usr/bin/tee -a /etc/ppp/chap-secrets
+	[ "$(/bin/grep $LOGIN /etc/ppp/pap-secrets)" ] || /bin/echo "$LOGIN	*	$PASSWD	$IP" | /usr/bin/tee -a /etc/ppp/pap-secrets
+	/bin/echo "plugin rp-pppoe.so
 $AC
 $SN
 $1
@@ -28,19 +30,19 @@ persist
 defaultroute
 hide-password
 noauth
-" | $sudo /usr/bin/tee /etc/ppp/peers/$NAME
-	[ "$DNS1" != "" -o "$DNS1" != "0.0.0.0" ] && /usr/bin/echo "nameserver $DNS1" | $sudo /usr/bin/tee /etc/resolv.conf
-	[ "$DNS2" != "" -o "$DNS2" != "0.0.0.0" ] && /usr/bin/echo "nameserver $DNS2" | $sudo /usr/bin/tee -a /etc/resolv.conf
-	$sudo /usr/bin/pppd call $NAME 
-	/usr/bin/sleep 3
+" | /usr/bin/tee /etc/ppp/peers/$NAME
+	[ "$DNS1" != "" -o "$DNS1" != "0.0.0.0" ] && /bin/echo "nameserver $DNS1" | /usr/bin/tee /etc/resolv.conf
+	[ "$DNS2" != "" -o "$DNS2" != "0.0.0.0" ] && /bin/echo "nameserver $DNS2" | /usr/bin/tee -a /etc/resolv.conf
+	/usr/sbin/pppd call $NAME 
+	/bin/sleep 3
 	PID=$!
 	if [ -h /sys/class/net/ppp0 ]; then
-		/usr/bin/echo "pppoe connect" | $sudo tee -a /var/log/$IFACE.log
-		/usr/local/bin/ntf -i "$1" "PPPoE Ok!"
+		/bin/echo "pppoe connect" | /usr/bin/tee -a /var/log/$IFACE.log
+#		/usr/local/bin/ntf -i "$1" "PPPoE Ok!"
 		return 0
 	else
-		$sudo /usr/bin/kill $PID
-		echo "No PPPoE connect" | $sudo /usr/bin/tee -a /var/log/${1}.log
+		/bin/kill $PID
+		echo "No PPPoE connect" | /usr/bin/tee -a /var/log/${1}.log
 		return 1
 	fi
 else
@@ -50,28 +52,28 @@ fi
 
 ifup
 
-if [ "$(/usr/bin/cat /sys/class/net/$IFACE/carrier)" = 1 ]; then
-	/usr/bin/echo "$0: carrier yes" | $sudo /usr/bin/tee -a /var/log/${IFACE}.log
+if [ "$(/bin/cat /sys/class/net/$IFACE/carrier)" = 1 ]; then
+	/bin/echo "$0: carrier yes" | /usr/bin/tee -a /var/log/${IFACE}.log
 	if [ -s "${CONFDIR}${HWADDR}.pppoe.conf" -o "$2" = "pppoeup" ]; then
 		pppoeup $IFACE
 		ST=$?
-		[ "$ST" = 1 ] && $sudo /usr/bin/kill $(/usr/bin/pidof pppd)
+		[ "$ST" = 1 ] && /bin/kill $(/bin/pidof pppd)
 	fi
 	if [ -s "${CONFDIR}${HWADDR}.conf" ]; then
 		static
 	else
-		dhcpc $($sudo /usr/bin/udhcpc -i $IFACE -n 2>/dev/null)
+		dhcpc $(/sbin/udhcpc -i $IFACE -n 2>/dev/null)
 		if [ $? = 1 -a $ST = 1 ]; then
-			$sudo /usr/bin/ifconfig $IFACE down
-			/usr/bin/echo "$0: $IFACE down" | $sudo /usr/bin/tee -a /var/log/$IFACE.log
-			/usr/local/bin/ntf -e $IFACE "$IFACE down"
+			/sbin/ifconfig $IFACE down
+			/bin/echo "$0: $IFACE down" | /usr/bin/tee -a /var/log/$IFACE.log
+#			/usr/local/bin/ntf -e $IFACE "$IFACE down"
 		fi
 	fi
 else
-	/usr/bin/echo "$0: $IFACE: No carrier" | $sudo  /usr/bin/tee -a /var/log/${IFACE}.log
-	/usr/local/bin/ntf -e $IFACE "No carrier"
-	$sudo /usr/bin/ifconfig $IFACE down
-	/usr/local/bin/ntf -e $IFACE "$IFACE down"
+	/bin/echo "$0: $IFACE: No carrier" | /usr/bin/tee -a /var/log/${IFACE}.log
+#	/usr/local/bin/ntf -e $IFACE "No carrier"
+	/sbin/ifconfig $IFACE down
+#	/usr/local/bin/ntf -e $IFACE "$IFACE down"
 	exit 1
 fi
 

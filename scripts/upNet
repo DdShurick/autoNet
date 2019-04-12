@@ -1,29 +1,33 @@
 #!/bin/sh
-#DdShurick GPL v2 17.07.2018
+#DdShurick GPL v2 12.04.2019
 [ "$1" ] || exit 0
-[ `id -u` = 0 ] && export DISPLAY=":0" || sudo=sudo
-ST="$(/usr/bin/grep $2 /etc/net/interfaces.lck | cut -f3 -d" ")"
+[ "$(/usr/bin/id -u)" = "0" ] || exit 0
+ST="$(/bin/grep $2 /etc/net/interfaces.lck | cut -f3 -d" ")"
 
 if [ "$ST" ]; then
 	[ "$ST" = "down" ] && exit 0
 else
-	/usr/bin/echo "$@" | $sudo tee -a /etc/net/interfaces.lck
-	[ "$(/usr/bin/echo $1 | /usr/bin/grep ^e[nt])" ] || exit 0
+	/bin/echo "$@" | /usr/bin/tee -a /etc/net/interfaces.lck
+	[ "$(/bin/echo $1 | /bin/egrep '^wl|^ra')" ] && exit 0 #не автостартовать wifi
 fi
 
 case $1 in
 lo)
-	/usr/bin/ifconfig lo 127.0.0.1 up
-	/usr/bin/route add -net 127.0.0.0 netmask 255.0.0.0 lo
+	/sbin/ifconfig lo 127.0.0.1 up
+	/sbin/route add -net 127.0.0.0 netmask 255.0.0.0 lo
 ;;
 e[nt]*)
-	/usr/bin/lan.sh $1 &
+	/usr/sbin/lan.sh $1 &
 ;;
-wl*)
-	/usr/bin/wlan.sh $1 &
+wl*|ra*)
+	/usr/sbin/wlan.sh $1 &
 ;;
 ww*|usb?)
 	sleep 7
-	/usr/bin/lan.sh $1 &
+	/usr/sbin/lan.sh $1 &
 ;;
 esac
+
+until [ -s /tmp/dsp ]; do /bin/sleep 1; done;
+[ "$(/bin/pidof netTun)" ] && exit 0
+DISPLAY="$(cat /tmp/dsp)" /usr/bin/netTun &

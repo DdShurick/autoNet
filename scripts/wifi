@@ -1,11 +1,13 @@
 #!/bin/sh
 #wi-fi up. DdShurick 07.10.2018
 . /usr/lib/upNet/libupNet
-[ $(id -u) = 0 ] || sudo=sudo
+[ $(/usr/bin/id -u) = 0 ] && DISPLAY="$(cat /tmp/dsp)" || loginroot $0
 
 ifdown () {
-	[ $(pidof wpa_supplicant) ] && $sudo kill $(pidof wpa_supplicant)
-	$sudo ifconfig $IFACE down
+	[ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
+	/sbin/ifconfig $IFACE down
+	ADDR=$(grep $IFACE /etc/net/interfaces.lck | cut -f2 -d' ')
+	sed -i "s/$IFACE $ADDR up/$IFACE $ADDR down/" /etc/net/interfaces.lck
 	exit 1
 }
 
@@ -24,14 +26,14 @@ if [ "$IFACE" ]; then
 		[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
 	fi
 else
-	ntf -e "Нет wi-fi интерфейсов" &
+	msg_err "$IFACE" "Нет wi-fi интерфейсов" &
 	exit 1
 fi
-#[ $(pidof dhcpcd) ] && dhcpcd -k $IFACE
-[ $(pidof wpa_supplicant) ] && $sudo kill $(pidof wpa_supplicant)
-$sudo ifconfig $IFACE up
+
+[ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
+/sbin/ifconfig $IFACE up
 sleep 2
-$sudo iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | $sudo tee /tmp/iwlist
+iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | tee /tmp/iwlist
 export Window="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
   <text><label>Найдены сети Wi-Fi</label></text>
   <tree>
@@ -59,10 +61,10 @@ if [ "$KEY" = "key:on" ]; then
 	[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && ifdown
 	[ "$MYPASSWD" ] || ifdown
 	[  "$EXIT" = "Подключить"  ] || ifdown
-	wpa_passphrase "$MYESSID" "$MYPASSWD" | grep -v '#psk' | $sudo tee /tmp/wpa.conf
-	if $sudo wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf; then 2>&1 | $sudo tee -a /var/log/${IFACE}.log
+	wpa_passphrase "$MYESSID" "$MYPASSWD" | grep -v '#psk' | tee /tmp/wpa.conf
+	if /usr/sbin/wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf; then 2>&1 | tee -a /var/log/${IFACE}.log
 		
-		dhcpc $($sudo udhcpc -i $IFACE -n 2>/dev/null) 
+		dhcpc $(/sbin/udhcpc -i $IFACE -n 2>/dev/null) 
 		if [ $? = 0 ]; then
 			export Addr="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\">
 	<frame Сеть $MYESSID Ok>
@@ -81,8 +83,8 @@ if [ "$KEY" = "key:on" ]; then
 			eval $(gtkdialog -c --program "Addr") 
 			[ "$EXIT" = "No" -o  "$EXIT" = "abort" ] && ifdown
 			[ "$EXIT" = "Сохранить"  ] || ifdown
-			MYADDR=$(/usr/bin/grep -B 5 "$MYESSID" /tmp/iwtree | /usr/bin/awk '/Address/ {print $5}')
-			$sudo cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
+			MYADDR=$(grep -B 5 "$MYESSID" /tmp/iwtree | awk '/Address/ {print $5}')
+			cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
 		else
 			tunstatic $IFACE
 		fi
@@ -90,6 +92,6 @@ if [ "$KEY" = "key:on" ]; then
 		ifdown
 	fi
 elif [ "$KEY" = "key:off" ]; then
-	$sudo iwconfig $IFACE essid "$MYESSID" key off
-	dhcpc $($sudo udhcpc -i $IFACE -n 2>/dev/null) 
+	iwconfig $IFACE essid "$MYESSID" key off
+	dhcpc $(/sbin/udhcpc -i $IFACE -n 2>/dev/null) 
 fi

@@ -1,38 +1,37 @@
-#!/bin/bash
-#internet up. DdShurick 26.09.2018, GPL v2
+#!/bin/sh
+#internet up. DdShurick 12.04.2019, GPL v2
 
-[ $(id -u) = 0 ] && DISPLAY=":0" || sudo=sudo
+[ $(/usr/bin/id -u) = 0 ] && DISPLAY="$(cat /tmp/dsp)" || loginroot $0
 
 up_func () {
  case $1 in
 	modem)
-		$sudo sed -i "s/modem down/modem up/" /etc/net/interfaces.lck
-		$sudo up3Gmodem
+		sed -i "s/modem down/modem up/" /etc/net/interfaces.lck
+		up3Gmodem
 	;;
 	*)
 		HWADDR=$(cat /sys/class/net/$1/address) || return 1
-		$sudo sed -i "s/$HWADDR down/$HWADDR up/" /etc/net/interfaces.lck
+		sed -i "s/$HWADDR down/$HWADDR up/" /etc/net/interfaces.lck
 		/lib/udev/upNet $1 $HWADDR up
 	;;
  esac
 }
 
 down_func () {
-[ -f /var/run/dhcpcd-${1}.pid ] && $sudo dhcpcd -k $1
-[ $(pidof wpa_supplicant) ] && $sudo kill $(pidof wpa_supplicant)
-[ $(pidof wvdial) ] && $sudo kill $(pidof wvdial)
-[ $(pidof pppd) ] && $sudo killall pppd
-$sudo ifconfig $1 down
+[ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
+[ $(pidof wvdial) ] && kill $(pidof wvdial)
+[ $(pidof pppd) ] && kill $(pidof pppd)
+/sbin/ifconfig $1 down
 if [ -h /sys/class/net/$1 ]; then
 	HWADDR=$(cat /sys/class/net/$1/address) || return 1
-	$sudo sed -i "s/$HWADDR up/$HWADDR down/" /etc/net/interfaces.lck
+	sed -i "s/$HWADDR up/$HWADDR down/" /etc/net/interfaces.lck
 fi
-$sudo sed -i "s/modem up/modem down/" /etc/net/interfaces.lck 
+sed -i "s/modem up/modem down/" /etc/net/interfaces.lck 
 echo "$1 down"
 }
 
 all_off () {
-$sudo route del default
+/sbin/route del default
 ls -1 /sys/class/net | grep -v lo | while read IFACE
 do
 	if [ "${IFACE:0:4}" = "wlan" ]; then
@@ -57,7 +56,7 @@ echo "<frame Модем $ST>
  	<input file>/usr/share/pixmaps/usb_modem_${UD}.svg</input>
 	<action function=\"exit\">$ACT modem</action>
  </button>
-</frame>" | $sudo tee -a /tmp/connect
+</frame>" | tee -a /tmp/connect
 fi
 
 for IFACE in $(ls -1 /sys/class/net)
@@ -81,7 +80,7 @@ echo "<frame $IFACE $ST>
  	<input file>/usr/share/pixmaps/${IMG}${UD}.svg</input>
 	<action function=\"exit\">$ACT $IFACE</action>
  </button>
-</frame>" | $sudo tee -a /tmp/connect
+</frame>" | tee -a /tmp/connect
 done
 
 echo "</hbox>
@@ -90,7 +89,7 @@ echo "</hbox>
  	<default>true</default>
  	<variable>DHCP</variable>
  </checkbox>
-</vbox></window>'" | $sudo tee -a /tmp/connect
+</vbox></window>'" | tee -a /tmp/connect
 . /tmp/connect
 eval $(gtkdialog -c --program "Window")
 

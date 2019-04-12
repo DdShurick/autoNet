@@ -1,6 +1,6 @@
 #!/bin/sh
-#DdShurick 25.08.18
-[ $(/usr/bin/id -u) = 0 ] || sudo=sudo
+#DdShurick 12.04.19
+[ $(/usr/bin/id -u) = 0 ] && DISPLAY="$(cat /tmp/dsp)" || loginroot $0
 . /usr/lib/upNet/libupNet
 
 if [ "$IFASE" ]; then
@@ -77,7 +77,7 @@ export PPPOECONF="<window icon-name=\"network\" title=\" PPPoE\" resizable=\"fal
  </hbox>
 </vbox></window>
 "
-eval $(gtkdialog -c --display ":0" --program "PPPOECONF")
+eval $(gtkdialog -c --program "PPPOECONF")
 
 [ "$EXIT" = "abort" ] && exit 1
 [ "$NAME" ] ||  MSG="Отсутствует: Имя_соединения"
@@ -93,24 +93,24 @@ eval $(gtkdialog -c --display ":0" --program "PPPOECONF")
 [ "$SN" ] && DSN=" -S $SN"
 [ "$AC" ] && DAC=" -C $AC"
 if [ "$MSG" ]; then
-	ntf -e "$(echo $MSG | tr ' ' '\n')"
+#	ntf -e "$(echo $MSG | tr ' ' '\n')"
 	exit 1
 fi
 
 ifup
-ntf -i "Поиск PPPoE..." &
+#ntf -i "Поиск PPPoE..." &
 
-if [ "$($sudo pppoe-discovery -I ${IFACE}${DSN}${DAC})" ]; then
+if [ "$(/usr/sbin/pppoe-discovery -I ${IFACE}${DSN}${DAC})" ]; then
 	echo "NAME=$NAME
 LOGIN=$LOGIN
 PASSWD=$PASSWD
-IP=$IP" | $sudo tee ${CONFDIR}${HWADDR}.pppoe.conf
-	[ "$DNS" = "usepeerdns" ] && echo "DNS=$DNS" | $sudo tee -a ${CONFDIR}${HWADDR}.pppoe.conf
-	[ "$DNS1" ] && echo "DNS1=$DNS1" | $sudo tee -a ${CONFDIR}${HWADDR}.pppoe.conf
-	[ "$DNS2" ] && echo "DNS2=$DNS2" | $sudo tee -a ${CONFDIR}${HWADDR}.pppoe.conf
-	[ "$SN" ] && echo "SN=\"rp_pppoe_service $SN\"" | $sudo tee -a ${CONFDIR}${HWADDR}.pppoe.conf
-	[ "$AC" ] && echo "AC=\"rp_pppoe_ac $AC\"" | $sudo tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+IP=$IP" | tee ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$DNS" = "usepeerdns" ] && echo "DNS=$DNS" | tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$DNS1" ] && echo "DNS1=$DNS1" | tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$DNS2" ] && echo "DNS2=$DNS2" | tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$SN" ] && echo "SN=\"rp_pppoe_service $SN\"" | tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$AC" ] && echo "AC=\"rp_pppoe_ac $AC\"" | tee -a ${CONFDIR}${HWADDR}.pppoe.conf
 	exec lan.sh $IFACE pppoeup
 else
-	ntf -e $IFACE "Нет доступа PPPoE"
+#	ntf -e $IFACE "Нет доступа PPPoE"
 fi
