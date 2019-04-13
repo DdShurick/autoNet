@@ -36,7 +36,7 @@ check_ping () {
 				/bin/sed -i "s/$1 down/$1 up/" /etc/net/interfaces.lck
 				/bin/echo "$0: Network Ok!" | /usr/bin/tee -a /var/log/${IFACE}.log
 				IMG=${IMG}_on.svg
-				msg $IFACE "Network Ok!"
+				[ "$(basename $0)" = "wifi" ] || msg $IFACE "Network Ok!"
 			else
 				msg_err $IFACE "No resolv"
 			fi
@@ -103,7 +103,7 @@ dhcpc () {
 		/sbin/route add default gw $GW
 		/bin/echo "nameserver $GW" | /usr/bin/tee /etc/resolv.conf
 		check_ping $HWADDR
-		return 0
+		return $?
 	elif [ "$ST" = 0 ]; then
 		return 0
 	else

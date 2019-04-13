@@ -1,7 +1,9 @@
 #!/bin/sh
 #wi-fi up. DdShurick 07.10.2018
-. /usr/lib/upNet/libupNet
 if [ $(/usr/bin/id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
+[ "$(pidof wpa_supplicant)" ] && kill "$(pidof wpa_supplicant)"
+[ "$(uname -m)" = "x86_64" -a -d /usr/lib64 ] && m=64
+. /usr/lib${m}/upNet/libupNet
 
 ifdown () {
 	[ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
@@ -69,7 +71,7 @@ if [ "$KEY" = "key:on" ]; then
 			export Addr="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\">
 	<frame Сеть $MYESSID Ok>
 	<vbox>
-		<text><label>Сохранить ${MYESSID}?</label></text>
+		<text><label>Сохранить настройки ${MYESSID}?</label></text>
 		<pixmap><height>64</height>
 			<input file>/usr/share/pixmaps/wireless.svg</input>
 		</pixmap>
@@ -81,8 +83,8 @@ if [ "$KEY" = "key:on" ]; then
 	</frame>
 </window>"
 			eval $(gtkdialog -c --program "Addr") 
-			[ "$EXIT" = "No" -o  "$EXIT" = "abort" ] && ifdown
-			[ "$EXIT" = "Сохранить"  ] || ifdown
+			[ "$EXIT" = "abort" ] && ifdown
+#			[ "$EXIT" = "Сохранить"  ] || ifdown
 			MYADDR=$(grep -B 5 "$MYESSID" /tmp/iwlist | awk '/Address/ {print $5}')
 			cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
 		else
