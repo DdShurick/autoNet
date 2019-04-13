@@ -38,7 +38,7 @@ noauth
 	PID=$!
 	if [ -h /sys/class/net/ppp0 ]; then
 		/bin/echo "pppoe connect" | /usr/bin/tee -a /var/log/$IFACE.log
-#		/usr/local/bin/ntf -i "$1" "PPPoE Ok!"
+		msg "$1" "PPPoE Ok!"
 		return 0
 	else
 		/bin/kill $PID
@@ -66,14 +66,13 @@ if [ "$(/bin/cat /sys/class/net/$IFACE/carrier)" = 1 ]; then
 		if [ $? = 1 -a $ST = 1 ]; then
 			/sbin/ifconfig $IFACE down
 			/bin/echo "$0: $IFACE down" | /usr/bin/tee -a /var/log/$IFACE.log
-#			/usr/local/bin/ntf -e $IFACE "$IFACE down"
+			msg_err $IFACE "$IFACE down"
 		fi
 	fi
 else
 	/bin/echo "$0: $IFACE: No carrier" | /usr/bin/tee -a /var/log/${IFACE}.log
-#	/usr/local/bin/ntf -e $IFACE "No carrier"
 	/sbin/ifconfig $IFACE down
-#	/usr/local/bin/ntf -e $IFACE "$IFACE down"
+	msg_err $IFACE "No carrier, $IFACE down"
 	exit 1
 fi
 

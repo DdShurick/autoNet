@@ -83,7 +83,7 @@ if [ "$KEY" = "key:on" ]; then
 			eval $(gtkdialog -c --program "Addr") 
 			[ "$EXIT" = "No" -o  "$EXIT" = "abort" ] && ifdown
 			[ "$EXIT" = "Сохранить"  ] || ifdown
-			MYADDR=$(grep -B 5 "$MYESSID" /tmp/iwtree | awk '/Address/ {print $5}')
+			MYADDR=$(grep -B 5 "$MYESSID" /tmp/iwlist | awk '/Address/ {print $5}')
 			cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
 		else
 			tunstatic $IFACE
