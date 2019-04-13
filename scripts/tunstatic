@@ -1,5 +1,5 @@
 #!/bin/sh
-#DdShurick 26.09.18 GPL v2
+#DdShurick 13.04.19 GPL v2
 DISPLAY="$(cat /tmp/dsp)"
 CONFDIR="/etc/net/interfaces/"
 if [ "$(echo $1 | egrep '^e|^w')" = "" ]; then

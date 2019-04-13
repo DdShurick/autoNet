@@ -1,5 +1,8 @@
 # autoNet
 Автоподключение к сети интернет через проводной, Wi-fi, 3G и 4G модем.
+Требуемые для работы утилиты:
+pppd, pppoe-discovery, usb_modeswitch, usb_modeswitch_dispatcher, wpa_supplicant, wpa_passphrase.
+
 Установка в систему:
 make
 make install

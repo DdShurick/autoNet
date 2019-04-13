@@ -1,7 +1,7 @@
 #!/bin/sh
 #internet up. DdShurick 12.04.2019, GPL v2
 
-[ $(/usr/bin/id -u) = 0 ] && DISPLAY="$(cat /tmp/dsp)" || loginroot $0
+if [ $(/usr/bin/id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
 
 up_func () {
  case $1 in
@@ -62,16 +62,16 @@ fi
 for IFACE in $(ls -1 /sys/class/net)
 do
  case $IFACE in
-  e*) IMG=network_ ;;
-  wl*|r*) IMG=wireless_ ;;
-  u*|ww*) IMG=usb_modem_ ;;
+  e*) IMG=network ;;
+  wl*|r*) IMG=wireless ;;
+  u*|ww*) IMG=usb_modem ;;
   *) continue ;;
  esac
  
 if [ "$(cat /sys/class/net/$IFACE/operstate)" = down ]; then
- ACT="up_func"; ST="отключен"; UD="off"
+ ACT="up_func"; ST="отключен"; UD="_off"
 else
- ACT="down_func"; ST="подключен"; UD="on"
+ ACT="down_func"; ST="подключен"; UD="_on"
 fi
 
 echo "<frame $IFACE $ST>

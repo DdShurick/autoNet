@@ -1,11 +1,12 @@
 #!/bin/sh
-#DdShurick 12.04.19
+#DdShurick 13.04.19
 if [ $(/usr/bin/id -u) != 0 ]; then echo "you must be root"; exit 1; fi
 if [ $1 ]; then IFACE=$1; else echo "Не указан интерфейс"; exit 1; fi
 if [ ! -d /sys/class/net/$IFACE/phy80211 ]; then echo "Интерфейс не wifi"; exit 1; fi
 [ "$(cat /sys/class/net/$IFACE/operstate)" = "up" ] && exit 0
 [ "$(uname -m)" = "x86_64" -a -d /usr/lib64 ] && m=64
 . /usr/lib${m}/upNet/libupNet
+IMG="/usr/share/pixmaps/wireless"
 WPADIR="/etc/net/wpa_profiles/"
 CONFDIR="/etc/net/interfaces/"
 HWADDR=$(/bin/cat /sys/class/net/$IFACE/address)
@@ -18,9 +19,10 @@ ifdown () {
 
 #Получаем список точек доступа и ищем файл конфигурации
 ifup
+
 /usr/bin/iwlist $IFACE scan | /bin/egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | /usr/bin/tee /tmp/iwlist
 if [ ! -s /tmp/iwlist ]; then 
-#	/usr/local/bin/ntf -e $IFACE "Сети wifi не найдены"
+	msg_err $IFACE "Сети wifi не найдены"
 	ifdown
 fi
 for WLNADDR in $(/usr/bin/awk '/Address:/ {print $5}' /tmp/iwlist)
@@ -59,7 +61,7 @@ else
 		if [ $T = 10 ]; then
 			ifdown
 			/bin/echo "$0: Timeout, interface $IFACE down" | /usr/bin/tee -a /var/log/$IFACE.log #контроль
-#			/usr/local/bin/ntf -e $IFACE "Timeout, interface $IFACE down"
+			msg_err $IFACE "Timeout, interface $IFACE down"
 			exit 1
 		fi 
 	done

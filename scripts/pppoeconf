@@ -1,6 +1,6 @@
 #!/bin/sh
 #DdShurick 12.04.19
-[ $(/usr/bin/id -u) = 0 ] && DISPLAY="$(cat /tmp/dsp)" || loginroot $0
+if [ $(/usr/bin/id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
 . /usr/lib/upNet/libupNet
 
 if [ "$IFASE" ]; then

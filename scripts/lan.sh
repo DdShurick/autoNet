@@ -6,8 +6,8 @@ if [ $1 ]; then IFACE=$1; else echo "Не указан интерфейс"; exit
 [ "$(uname -m)" = "x86_64" -a -d /usr/lib64 ] && m=64
 
 case $IFACE in
-e[nt]*) IMG="/usr/share/pixmaps/network_" ;;
-ww*|usb?) IMG="/usr/share/pixmaps/usb_modem_" ;;
+e[nt]*) IMG="/usr/share/pixmaps/network" ;;
+ww*|usb?) IMG="/usr/share/pixmaps/usb_modem" ;;
 esac
 
 . /usr/lib${m}/upNet/libupNet

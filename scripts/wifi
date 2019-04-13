@@ -1,7 +1,7 @@
 #!/bin/sh
 #wi-fi up. DdShurick 07.10.2018
 . /usr/lib/upNet/libupNet
-[ $(/usr/bin/id -u) = 0 ] && DISPLAY="$(cat /tmp/dsp)" || loginroot $0
+if [ $(/usr/bin/id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
 
 ifdown () {
 	[ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)

@@ -2,7 +2,7 @@ msg () {
  export MSG="<window title=\"WWW\"><frame $@>
  <pixmap>
   <height>100</height>
-  <input file>$IMG</input>
+  <input file>${IMG}</input>
  </pixmap>
  </frame></window>"
 	/usr/bin/gtkdialog -c --program=MSG &
@@ -15,7 +15,7 @@ msg_err () {
  export MSG="<window title=\"WWW\"><frame $@>
  <pixmap>
   <height>100</height>
-  <input file>${IMG}err.svg</input>
+  <input file>${IMG}_err.svg</input>
  </pixmap>
  </frame></window>"
 	/usr/bin/gtkdialog -c --program=MSG &
@@ -35,7 +35,7 @@ check_ping () {
 			if /bin/ping -c 1 -W 2 google.ru ; then
 				/bin/sed -i "s/$1 down/$1 up/" /etc/net/interfaces.lck
 				/bin/echo "$0: Network Ok!" | /usr/bin/tee -a /var/log/${IFACE}.log
-				IMG=${IMG}on.svg
+				IMG=${IMG}_on.svg
 				msg $IFACE "Network Ok!"
 			else
 				msg_err $IFACE "No resolv"
@@ -43,7 +43,7 @@ check_ping () {
 		else
 			/sbin/route del default $IFACE
 			/bin/echo "$0: Connect LAN" | /usr/bin/tee -a /var/log/${IFACE}.log
-			IMG=${IMG}lan.svg
+			IMG=${IMG}_lan.svg
 			msg $IFACE "Connect only LAN"
 		fi
 	else
