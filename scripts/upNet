@@ -7,7 +7,7 @@ ST="$(/bin/grep $2 /etc/net/interfaces.lck | cut -f3 -d" ")"
 if [ "$ST" ]; then
 	[ "$ST" = "down" ] && exit 0
 else
-	/bin/echo "$@" | /usr/bin/tee -a /etc/net/interfaces.lck
+	/bin/echo "$@" | grep -v lo >> /etc/net/interfaces.lck
 	[ "$(/bin/echo $1 | /bin/egrep '^wl|^ra')" ] && exit 0 #не автостартовать wifi
 fi
 
@@ -15,6 +15,11 @@ case $1 in
 lo)
 	/sbin/ifconfig lo 127.0.0.1 up
 	/sbin/route add -net 127.0.0.0 netmask 255.0.0.0 lo
+	while [ 1 ]; do
+		until [ -s /tmp/dsp ]; do /bin/sleep 1; done;
+		[ "$(/bin/pidof netTun)" ] && exit 0
+		DISPLAY="$(cat /tmp/dsp)" /usr/bin/netTun
+	done
 ;;
 e[nt]*)
 	/usr/sbin/lan.sh $1 &
@@ -28,6 +33,4 @@ ww*|usb?)
 ;;
 esac
 
-until [ -s /tmp/dsp ]; do /bin/sleep 1; done;
-[ "$(/bin/pidof netTun)" ] && exit 0
-DISPLAY="$(cat /tmp/dsp)" /usr/bin/netTun &
+exit 0
