@@ -1,7 +1,8 @@
 #!/bin/sh
 #DdShurick 12.04.19
 if [ $(/usr/bin/id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
-. /usr/lib/upNet/libupNet
+[ "$(uname -m)" = "x86_64" -a -d /usr/lib64 ] && m=64
+. /usr/lib${m}/upNet/libupNet
 
 if [ "$IFASE" ]; then
 	IFACE=eth0

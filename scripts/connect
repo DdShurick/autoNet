@@ -1,5 +1,5 @@
 #!/bin/sh
-#internet up. DdShurick 12.04.2019, GPL v2
+#internet up. DdShurick 16.04.2019, GPL v2
 
 if [ $(/usr/bin/id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
 
@@ -7,6 +7,7 @@ up_func () {
  case $1 in
 	modem)
 		sed -i "s/modem down/modem up/" /etc/net/interfaces.lck
+		[ -n /dev/ppp ] || mknod /dev/ppp c 108 0
 		up3Gmodem
 	;;
 	*)
