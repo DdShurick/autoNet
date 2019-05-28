@@ -7,13 +7,14 @@ prefix = /usr
 bindir = ${prefix}/bin
 sbindir = ${prefix}/sbin
 datarootdir = ${prefix}/share
-libdir = ${prefix}/lib
+libdir = ${prefix}/lib`uname -m|cut -b 5-`
 sysconfdir = /etc
 
 all:
 	$(CC) -o up3Gmodem src/up3Gmodem.c $(FLAGS) $(LIBS)
 	$(CC) -o ussd src/ussd.c $(FLAGS) $(LIBS)
 	$(CC) -o check3Gtty src/check3Gtty.c
+	$(CC) -o netTun src/netTun.c $(FLAGS) $(LIBS)
 
 install:
 	$(INSTALL) -D -m 755 up3Gmodem $(DESTDIR)$(bindir)/up3Gmodem
@@ -22,6 +23,8 @@ install:
 	$(STRIP) $(DESTDIR)$(bindir)/ussd
 	$(INSTALL) -D -m 755 check3Gtty $(DESTDIR)/lib/udev/check3Gtty
 	$(STRIP) $(DESTDIR)/lib/udev/check3Gtty
+	$(INSTALL) -D -m 755 netTun $(DESTDIR)$(bindir)/netTun
+	$(STRIP) $(DESTDIR)$(bindir)/netTun
 	
 	$(INSTALL) -D -m 755 scripts/connect $(DESTDIR)$(bindir)/connect
 	$(INSTALL) -D -m 755 scripts/pppoeconf $(DESTDIR)$(bindir)/pppoeconf
@@ -39,4 +42,4 @@ install:
 	
 
 clean:
-	rm up3Gmodem ussd check3Gtty
+	rm up3Gmodem ussd check3Gtty netTun

@@ -8,7 +8,7 @@
 GtkStatusIcon *tray_icon;
 
 void  view_popup_menu_on_doc (GtkWidget *menuitem, gpointer userdata)
-{ system("links -g /usr/share/doc/upNet/upNet.html & ");	}
+{ system("/usr/local/bin/defaulthtmlviewer -g /usr/share/doc/upNet/upNet.html & ");	}
 
 void  view_popup_menu_on_PPPoE (GtkWidget *menuitem, gpointer userdata)
 { system("/usr/bin/pppoeconf & ");	}
