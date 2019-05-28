@@ -33,7 +33,7 @@ install:
 	$(INSTALL) -D -m 755 scripts/upNet $(DESTDIR)/lib/udev/upNet
 	$(INSTALL) -D -m 755 scripts/lan.sh $(DESTDIR)$(sbindir)/lan.sh
 	$(INSTALL) -D -m 755 scripts/wlan.sh $(DESTDIR)$(sbindir)/wlan.sh
-	$(INSTALL) -D -m 755 scripts/libupNet $(DESTDIR)$(prefix)$(libdir)/upNet/libupNet
+	$(INSTALL) -D -m 755 scripts/libupNet $(DESTDIR)$(libdir)/upNet/libupNet
 	$(INSTALL) -D -m 644 rules.d/99-net_up.rules $(DESTDIR)/lib/udev/rules.d/99-net_up.rules
 	$(INSTALL) -d $(DESTDIR)$(datarootdir)/
 	cp -a applications/ $(DESTDIR)$(datarootdir)/
