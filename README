@@ -9,3 +9,5 @@ make install
 Сборка в пакет:
 make
 make DESTDIR=/полный путь/имя каталога (произвольное)
+
+В системе должны быть установлены pppd, usb_modesvitch, wireless_tools, wpa_supplicant.

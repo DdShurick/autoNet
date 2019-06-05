@@ -63,8 +63,7 @@ int main(int argc, char **argv) {
 		closedir(md);
 		printf("modem\n");
 		unlink("/dev/modem");
-		symlink(dev,"/dev/modem");	
-		system("DISPLAY=:0 /usr/bin/tray3Gcsq & ");
+		symlink(dev,"/dev/modem");
 		exit(0);
 	}
 }
