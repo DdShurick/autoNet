@@ -16,6 +16,9 @@ void  view_popup_menu_on_PPPoE (GtkWidget *menuitem, gpointer userdata)
 void  view_popup_menu_on_StatIP (GtkWidget *menuitem, gpointer userdata)
 { system("/usr/bin/tunstatic");  }
 
+void  view_popup_menu_on_WiFi (GtkWidget *menuitem, gpointer userdata)
+{ system("/usr/bin/wifi");  }
+
 static void tray_icon_on_menu(GtkStatusIcon *status_icon, guint button, guint activate_time, gpointer user_data)
 {
 	GtkWidget *menu, *menuitem;
@@ -33,6 +36,10 @@ static void tray_icon_on_menu(GtkStatusIcon *status_icon, guint button, guint ac
     g_signal_connect(menuitem, "activate", (GCallback) view_popup_menu_on_StatIP, status_icon);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
     
+    menuitem = gtk_menu_item_new_with_label("Настроить WiFi");
+    g_signal_connect(menuitem, "activate", (GCallback) view_popup_menu_on_WiFi, status_icon);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
+
     gtk_widget_show_all(menu);
     gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, button, gdk_event_get_time(NULL));
 }

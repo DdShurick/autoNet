@@ -1,6 +1,6 @@
 #!/bin/sh
 #DdShurick 13.04.19 GPL v2
-DISPLAY="$(cat /tmp/dsp)"
+if [ $(/usr/bin/id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
 CONFDIR="/etc/net/interfaces/"
 if [ "$(echo $1 | egrep '^e|^w')" = "" ]; then
 	IFACE="$(yad --list --column="Выберите интерфейс" $(ls -1 /sys/class/net|egrep '^e|^w')|tr -d \|)"
