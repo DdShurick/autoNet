@@ -1,8 +1,9 @@
 msg () {
- export MSG="<window title=\"WWW\"><frame $@>
+#	ntf -i ${IFACE}: "$1"
+ export MSG="<window title=\"WWW\" resizable=\"false\"><frame $@>
  <pixmap>
   <height>100</height>
-  <input file>${IMG}</input>
+  <input file>$IMG</input>
  </pixmap>
  </frame></window>"
 	/usr/bin/gtkdialog -c --program=MSG &
@@ -12,18 +13,40 @@ msg () {
 }
 
 msg_err () {
- export MSG="<window title=\"WWW\"><frame $@>
+#	/sbin/ifconfig "$IFACE" down
+#	ntf -i ${IFACE}: "$1"
+ export MSG="<window title=\"WWW\" resizable=\"false\"><frame $@>
  <pixmap>
   <height>100</height>
-  <input file>${IMG}_err.svg</input>
+  <input file>${IMG}/usr/share/pixmaps/error.svg</input>
  </pixmap>
  </frame></window>"
 	/usr/bin/gtkdialog -c --program=MSG &
 }
 
+select_iface () {
+	export LIST="<window icon-name=\"network\" title=\"Static IP\" resizable=\"false\">
+ <vbox>
+  <text><label>Выберите интерфейс.</label></text>
+  <list>
+   <variable>IFACE</variable>
+   $(echo $@ | sed 's|^|<item>|;s| |</item>\n<item>|g;s|$|</item>|')
+   </list>
+  <hbox>
+   <button ok></button>
+   <button cancel></button>
+  </hbox>
+ </vbox>
+</window>
+"
+eval $(/usr/bin/gtkdialog -c --program "LIST")
+[ "$EXIT" = "abort" -o "$EXIT" = "Cancel" ] && exit
+[ "$IFACE" = "" ] && ( msg_err "Ничего не выбрано. Выходим." ; exit; )
+}
+
 ifup () {
 	if [ "$(/bin/cat /sys/class/net/$IFACE/operstate)" != "up" ]; then
-		/sbin/ifconfig $IFACE up && /bin/echo "$0: $IFACE up" | /usr/bin/tee /var/log/${IFACE}.log
+		/sbin/ifconfig $IFACE up
 		sleep 3
 		[ "$(/bin/cat /sys/class/net/$IFACE/operstate)" = "up" ] && return 0 || return 1
 	fi
@@ -34,33 +57,28 @@ check_ping () {
 		if /bin/ping -c 1 -W 2 8.8.8.8 ; then
 			if /bin/ping -c 1 -W 2 google.ru ; then
 				/bin/sed -i "s/$1 down/$1 up/" /etc/net/interfaces.lck
-				/bin/echo "$0: Network Ok!" | /usr/bin/tee -a /var/log/${IFACE}.log
-				IMG=${IMG}_on.svg
-				[ "$(basename $0)" = "wifi" ] || msg $IFACE "Network Ok!"
+				/bin/echo "$0: Network Ok!" | tee -a /var/log/${IFACE}.log
+				IMG=${IMG}on.svg
+				msg $IFACE "Network Ok!"
 			else
 				msg_err $IFACE "No resolv"
 			fi
 		else
 			/sbin/route del default $IFACE
-			/bin/echo "$0: Connect LAN" | /usr/bin/tee -a /var/log/${IFACE}.log
-			IMG=${IMG}_lan.svg
+			/bin/echo "$0: Connect LAN" | tee -a /var/log/${IFACE}.log
+			IMG=${IMG}lan.svg
 			msg $IFACE "Connect only LAN"
 		fi
 	else
-		/bin/echo "$0: No ping $GW" | /usr/bin/tee -a /var/log/${IFACE}.log
-		[ "$(/bin/pidof wpa_supplicant)" ] && /usr/bin/kill $(/bin/pidof wpa_supplicant)
-		/sbin/route del default
+		/bin/echo "$0: No ping $GW" | tee -a /var/log/${IFACE}.log
+		[ "$(/bin/pidof wpa_supplicant)" ] && /bin/kill $(/bin/pidof wpa_supplicant)
 		/sbin/ifconfig "$IFACE" down
 		msg_err "No ping $GW"
 	fi
 }
 
-check_ip_err () {
-	echo "$1" | grep -Eq '^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$'
-}
-
 static () {
-	. ${CONFDIR}${HWCONFIGFILE}
+	. ${CONFDIR}${HWADDR}.conf
 	if [ "$IP_ADDRESS" ]; then
 		/sbin/ifconfig "$IFACE" "$IP_ADDRESS"
 	else
@@ -74,8 +92,8 @@ static () {
 			/bin/echo "nameserver $DNS_SERVER2" | /usr/bin/tee -a /etc/resolv.conf
 		fi
 	else
-		/bin/echo "$0: No DNS_SERVERS in $HWCONFIGFILE" | /usr/bin/tee -a /var/log/$IFACE.log
-		msg_err $IFACE "Не указан DNS_SERVER"
+		/bin/echo "$0: No DNS_SERVERS in $HWCONFIGFILE" | /usr/bin/tee -a /var/log/${IFACE}.log
+		msg_err $IFACE "No DNS_SERVERS in $HWCONFIGFILE"
 	fi
 	if [ "$GW" ]; then
 		/sbin/route add default gw "$GW"
@@ -95,7 +113,7 @@ dhcpc () {
 	if [ "$2" ]; then
 		GW=$1; IP=$2
 	else
-		IP=$1	
+		IP=$1
 	fi
 	
 	/sbin/ifconfig $IFACE $IP
@@ -103,8 +121,8 @@ dhcpc () {
 		/sbin/route add default gw $GW
 		/bin/echo "nameserver $GW" | /usr/bin/tee /etc/resolv.conf
 		check_ping $HWADDR
-		return $?
-	elif [ "$ST" = 0 ]; then
+		return 0
+	elif [ "$PPP" ]; then
 		return 0
 	else
 		/sbin/ifconfig $IFACE down
