@@ -98,8 +98,9 @@ if [ "$MSG" ]; then
 	exit
 fi
 
-IMG=/usr/share/pixmaps/search.svg
+IMG=search
 msg "Поиск PPPoE..." &
+pid=$!
 
 if [ "$(/usr/sbin/pppoe-discovery -I ${IFACE}${DSN}${DAC})" ]; then
 	/bin/echo "NAME=$NAME
@@ -111,8 +112,9 @@ IP=$IP" | /usr/bin/tee ${CONFDIR}${HWADDR}.pppoe.conf
 	[ "$DNS2" ] && /bin/echo "DNS2=$DNS2" | /usr/bin/tee -a ${CONFDIR}${HWADDR}.pppoe.conf
 	[ "$SN" ] && /bin/echo "SN=\"rp_pppoe_service $SN\"" | /usr/bin/tee -a ${CONFDIR}${HWADDR}.pppoe.conf
 	[ "$AC" ] && /bin/echo "AC=\"rp_pppoe_ac $AC\"" | /usr/bin/tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	kill $pid
 	exec /usr/sbin/lan.sh $IFACE pppoeup
 else
-	IMG=/usr/share/pixmaps/no_connect.svg
+	IMG=connect_no
 	msg_err "Нет доступа PPPoE"
 fi

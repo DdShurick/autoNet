@@ -1,16 +1,13 @@
 #!/bin/sh
-#wi-fi up. DdShurick 07.10.2018
-if [ $(/usr/bin/id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
-[ "$(pidof wpa_supplicant)" ] && kill "$(pidof wpa_supplicant)"
-[ "$(uname -m)" = "x86_64" -a -d /usr/lib64 ] && m=64
-. /usr/lib${m}/upNet/libupNet
-IMG="/usr/share/pixmaps/wireless"
+#wi-fi up. DdShurick 29.07.18
+
+if [ $(id -u) != 0 ]; then loginroot $0; exit 0; fi
+
+. /usr/lib64/upNet/libupNet
 
 ifdown () {
 	[ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
-	/sbin/ifconfig $IFACE down
-	ADDR=$(grep $IFACE /etc/net/interfaces.lck | cut -f2 -d' ')
-	sed -i "s/$IFACE $ADDR up/$IFACE $ADDR down/" /etc/net/interfaces.lck
+	ifconfig $IFACE down
 	exit 1
 }
 
@@ -25,30 +22,34 @@ if [ "$IFACE" ]; then
 		</tree>
 		<button><label>Подключить</label></button>
 		</vbox></window>"
-		eval $(gtkdialog -c --program "Iface")
+		eval $(gtkdialog -c --display=:0 --program "Iface")
 		[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
 	fi
 else
-	msg_err "$IFACE" "Нет wi-fi интерфейсов" &
+	export Iface="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
+	<text><label>Нет wi-fi интерфейсов</label></text>
+	<button><label>Выйти</label></button>
+	</vbox></window>"
+	eval $(gtkdialog -c --program "Iface")
 	exit 1
 fi
-
+#[ $(pidof dhcpcd) ] && dhcpcd -k $IFACE
 [ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
 /sbin/ifconfig $IFACE up
 sleep 2
-iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | tee /tmp/iwlist
-export Window="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
+/usr/bin/iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | tee /tmp/iwlist
+export Window="<window title=\"Wi-Fi\"><vbox>
   <text><label>Найдены сети Wi-Fi</label></text>
-  <tree>
+  <list>
    <variable>MYESSID</variable>
    $(awk -F \: '/ESSID/ {print "<item>"$2"</item>"}' /tmp/iwlist)
-  </tree>
+  </list>
   <button><label>Подключить</label></button>
  </vbox></window>"
 eval $(gtkdialog -c --program "Window")
 
 [ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" -o "$MYESSID" = "" ] && ifdown
-[  "$EXIT" = "Подключить"  ] || ifdown
+[  "$EXIT" = "Подключить"  ]|| ifdown
 
 KEY=$(grep $MYESSID -B 1 /tmp/iwlist | awk '/Encryption/ {print $2}')
 if [ "$KEY" = "key:on" ]; then
@@ -61,32 +62,27 @@ if [ "$KEY" = "key:on" ]; then
   <button><label>Подключить</label></button>
 </vbox></window>"
 	eval $(gtkdialog -c --program "Passw") 
-	[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && ifdown
-	[ "$MYPASSWD" ] || ifdown
-	[  "$EXIT" = "Подключить"  ] || ifdown
-	wpa_passphrase "$MYESSID" "$MYPASSWD" | grep -v '#psk' | tee /tmp/wpa.conf
+	[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
+	[ "$MYPASSWD" ] || exit 1
+	[  "$EXIT" = "Подключить"  ] || exit 1
+	/usr/sbin/wpa_passphrase "$MYESSID" "$MYPASSWD" | /bin/grep -v '#psk' | tee /tmp/wpa.conf
 	if /usr/sbin/wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf; then 2>&1 | tee -a /var/log/${IFACE}.log
+		dhcpc $(/sbin/udhcpc -i $IFACE -n 2>/dev/null) #-->libupNet
 		
-		dhcpc $(/sbin/udhcpc -i $IFACE -n 2>/dev/null) 
-		if [ $? = 0 ]; then
-			export Addr="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\">
-	<frame Сеть $MYESSID Ok>
-	<vbox>
-		<text><label>Сохранить настройки ${MYESSID}?</label></text>
-		<pixmap><height>64</height>
-			<input file>$IMG</input>
-		</pixmap>
-		<hbox><button yes>
-			<action function=\"exit\">Сохранить</action>
-		</button>
-		<button no></button></hbox>
-	</vbox>
-	</frame>
-</window>"
-			eval $(gtkdialog -c --program "Addr") 
-			[ "$EXIT" = "abort" ] && ifdown
-			MYADDR=$(grep -B 5 "$MYESSID" /tmp/iwlist | awk '/Address/ {print $5}')
-			cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
+		if [ "$?" = 0 ]; then
+			export Addr="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
+  <frame Сеть $MYESSID Ok>
+  <text><label>Сохранить ${MYESSID}?</label></text>
+  <button><height>100</height>
+  	<input file>/usr/share/pixmaps/wireless_on.svg</input>
+  	<action function=\"exit\">Сохранить</action>
+  </button>
+</frame></vbox></window>"
+			eval $(gtkdialog -c --display=:0 --program "Addr") 
+			[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit
+			[ "$EXIT" = "Сохранить"  ] || exit
+			MYADDR=$(/usr/bin/grep -B 5 "$MYESSID" /tmp/iwlist | /usr/bin/awk '/Address/ {print $5}')
+			/bin/cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
 		else
 			tunstatic $IFACE
 		fi
@@ -94,6 +90,6 @@ if [ "$KEY" = "key:on" ]; then
 		ifdown
 	fi
 elif [ "$KEY" = "key:off" ]; then
-	iwconfig $IFACE essid "$MYESSID" key off
-	dhcpc $(/sbin/udhcpc -i $IFACE -n 2>/dev/null) 
+	/usr/bin/iwconfig $IFACE essid "$MYESSID" key off
+	dhcpc $(/sbin/udhcpc -i $IFACE -n 2>/dev/null)
 fi

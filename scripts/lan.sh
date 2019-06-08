@@ -1,16 +1,13 @@
 #!/bin/sh
-#DdShurick 12.04.19
-if [ $(/usr/bin/id -u) != 0 ]; then echo "you must be root"; exit 1; fi
-if [ $1 ]; then IFACE=$1; else echo "Не указан интерфейс"; exit 1; fi
-[ "$(/bin/cat /sys/class/net/$IFACE/operstate)" = "up" ] && exit 0
-[ "$(uname -m)" = "x86_64" -a -d /usr/lib64 ] && m=64
+#DdShurick 25.08.18
+[ $1 ] && IFACE=$1 || exit 1
 
 case $IFACE in
-e[nt]*) IMG="/usr/share/pixmaps/network" ;;
-ww*|usb?) IMG="/usr/share/pixmaps/usb_modem" ;;
+e[nt]*) IMG="network_" ;;
+ww*|usb?) IMG="usb_modem_" ;;
 esac
 
-. /usr/lib${m}/upNet/libupNet
+. /usr/lib64/upNet/libupNet
 CONFDIR="/etc/net/interfaces/"
 HWADDR=$(/bin/cat /sys/class/net/$IFACE/address)
 
@@ -18,12 +15,12 @@ pppoeup () {
 if [ -f ${CONFDIR}${HWADDR}.pppoe.conf ]; then
 	. ${CONFDIR}${HWADDR}.pppoe.conf
 	/sbin/modprobe pppoe
-	[ "$(/bin/grep $LOGIN /etc/ppp/chap-secrets)" ] || /bin/echo "$LOGIN	*	$PASSWD	$IP" | /usr/bin/tee -a /etc/ppp/chap-secrets
-	[ "$(/bin/grep $LOGIN /etc/ppp/pap-secrets)" ] || /bin/echo "$LOGIN	*	$PASSWD	$IP" | /usr/bin/tee -a /etc/ppp/pap-secrets
+	[ /bin/grep "$LOGIN" /etc/ppp/chap-secrets ] || /bin/echo "$LOGIN	*	$PASSWD	$IP" >> /etc/ppp/chap-secrets
+	[ /bin/grep "$LOGIN" /etc/ppp/pap-secrets ] || /bin/echo "$LOGIN	*	$PASSWD	$IP" >> /etc/ppp/pap-secrets
 	/bin/echo "plugin rp-pppoe.so
 $AC
 $SN
-$1
+$IFACE
 name \"$LOGIN\"
 $DNS
 persist
@@ -31,14 +28,16 @@ defaultroute
 hide-password
 noauth
 " | /usr/bin/tee /etc/ppp/peers/$NAME
-	[ "$DNS1" != "" -o "$DNS1" != "0.0.0.0" ] && /bin/echo "nameserver $DNS1" | /usr/bin/tee /etc/resolv.conf
-	[ "$DNS2" != "" -o "$DNS2" != "0.0.0.0" ] && /bin/echo "nameserver $DNS2" | /usr/bin/tee -a /etc/resolv.conf
-	/usr/sbin/pppd call $NAME 
-	/bin/sleep 3
+	[ "$DNS1" != "" -o "$DNS1" != "0.0.0.0" ] && /bin/echo "nameserver $DNS1" | tee /etc/resolv.conf
+	[ "$DNS2" != "" -o "$DNS2" != "0.0.0.0" ] && /bin/echo "nameserver $DNS2" | tee -a /etc/resolv.conf
+	/usr/sbin/pppd call $NAME
 	PID=$!
+	/bin/sleep 3
 	if [ -h /sys/class/net/ppp0 ]; then
 		/bin/echo "pppoe connect" | /usr/bin/tee -a /var/log/$IFACE.log
-		msg "$1" "PPPoE Ok!"
+		/bin/cp /etc/ppp/resolv.conf /etc/resolv.conf
+		IMG=connect
+		msg "$IFACE PPPoE up"
 		return 0
 	else
 		/bin/kill $PID
@@ -50,9 +49,9 @@ else
 fi
 }
 
-ifup
+ifup && /bin/echo "$0: $IFACE up" | /usr/bin/tee /var/log/${IFACE}.log
 
-if [ "$(/bin/cat /sys/class/net/$IFACE/carrier)" = 1 ]; then
+if [ "$(/usr/bin/cat /sys/class/net/$IFACE/carrier)" = 1 ]; then
 	/bin/echo "$0: carrier yes" | /usr/bin/tee -a /var/log/${IFACE}.log
 	if [ -s "${CONFDIR}${HWADDR}.pppoe.conf" -o "$2" = "pppoeup" ]; then
 		pppoeup $IFACE
@@ -70,9 +69,8 @@ if [ "$(/bin/cat /sys/class/net/$IFACE/carrier)" = 1 ]; then
 		fi
 	fi
 else
-	/bin/echo "$0: $IFACE: No carrier" | /usr/bin/tee -a /var/log/${IFACE}.log
-	/sbin/ifconfig $IFACE down
-	msg_err $IFACE "No carrier, $IFACE down"
+	"$0: $IFACE: No carrier" | echo tee -a /var/log/${1}.log
+	msg_err $IFACE "No carrier"
 	exit 1
 fi
 
