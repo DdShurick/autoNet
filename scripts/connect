@@ -1,98 +1,111 @@
 #!/bin/sh
-#internet up. DdShurick 16.04.2019, GPL v2
+#DdShurick 26.09.2018, GPL v2
 
-if [ $(/usr/bin/id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
+if [ $(id -u) != 0 ]; then loginroot $0; exit 0; fi
 
 up_func () {
  case $1 in
 	modem)
-		sed -i "s/modem down/modem up/" /etc/net/interfaces.lck
-		[ -n /dev/ppp ] || mknod /dev/ppp c 108 0
-		up3Gmodem
+		[ -c /dev/ppp ] || /bin/mknod /dev/ppp c 108 0
+		/usr/bin/up3Gmodem && cp /etc/ppp/resolv.conf /etc/resolv.conf
 	;;
 	*)
 		HWADDR=$(cat /sys/class/net/$1/address) || return 1
-		sed -i "s/$HWADDR down/$HWADDR up/" /etc/net/interfaces.lck
+		/bin/sed -i "s/$HWADDR down/$HWADDR up/" /etc/net/interfaces.lck
 		/lib/udev/upNet $1 $HWADDR up
 	;;
  esac
 }
 
 down_func () {
+[ -f /var/run/dhcpcd-${1}.pid ] && /usr/sbin/dhcpcd -k $1
 [ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
 [ $(pidof wvdial) ] && kill $(pidof wvdial)
-[ $(pidof pppd) ] && kill $(pidof pppd)
+[ $(pidof pppd) ] && killall pppd
 /sbin/ifconfig $1 down
 if [ -h /sys/class/net/$1 ]; then
-	HWADDR=$(cat /sys/class/net/$1/address) || return 1
+	HWADDR=$(cat /sys/class/net/$1/address)
 	sed -i "s/$HWADDR up/$HWADDR down/" /etc/net/interfaces.lck
 fi
 sed -i "s/modem up/modem down/" /etc/net/interfaces.lck 
-echo "$1 down"
+echo "$1 down" | tee -a /var/log/${1}.log
 }
 
 all_off () {
-/sbin/route del default
-ls -1 /sys/class/net | grep -v lo | while read IFACE
-do
-	if [ "${IFACE:0:4}" = "wlan" ]; then
-		down_func $IFACE
-		continue
-	fi
-	[ "$(cat /sys/class/net/$IFACE/operstate | cut -b1)" = "u" ] && down_func $IFACE
-done 
+	/sbin/route del default
+	ls -1 /sys/class/net | grep -v lo | while read IFACE
+	do
+		if [ "${IFACE:0:4}" = "wlan" ]; then
+			down_func $IFACE
+			continue
+		fi
+		[ "$(cat /sys/class/net/$IFACE/operstate)" != "down" ] && down_func $IFACE
+	done 
 }
 
-echo "export Window='<window icon-name=\"network\" title=\"AutoNet\" resizable=\"false\"><vbox><hbox>" | tee /tmp/connect
+echo "export Window='<window  icon-name=\"network\" title=\"Сетевые интерфейсы\" resizable=\"false\"><hbox>" | tee /tmp/connect
 #модем
 if [ -d /sys/bus/usb-serial/devices/ttyUSB0 -o -d /sys/bus/usb-serial/devices/ttyACM0 ]; then
-	if [ "$(pidof pppd)" ]; then
+	if [ "$(pidof pppd)" ]; then ###
 	 ST="подключен"; ACT="down_func"; UD="on"
 	else
 	 ST="отключен"; ACT="up_func"; UD="off"
 	fi
-echo "<frame Модем $ST>
+echo "<frame Модем $ST><vbox>
  <button>
  	<height>100</height>
- 	<input file>/usr/share/pixmaps/usb_modem_${UD}.svg</input>
+	<input file>/usr/share/pixmaps/usb_modem_${UD}.svg</input>
 	<action function=\"exit\">$ACT modem</action>
  </button>
-</frame>" | tee -a /tmp/connect
+ <button>
+ 	<label>Запрос USSD</label>
+ 	<action function=\"exit\">ussd</action>
+ </button>
+</vbox></frame>" | tee -a /tmp/connect
 fi
 
-for IFACE in $(ls -1 /sys/class/net)
+for IFACE in $(ls /sys/class/net)
 do
  case $IFACE in
-  e*) IMG=network ;;
-  wl*|r*) IMG=wireless ;;
-  u*|ww*) IMG=usb_modem ;;
+  e*) IMG=network_ 
+  FNC="<button>
+ 	<label>PPPoE</label>
+ 	<action function=\"exit\">pppoeconf</action>
+ </button>"
+  ;;
+  wl*|r*) IMG=wireless_ 
+  FNC="<checkbox>
+ 	<label>DHCP</label>
+ 	<default>true</default>
+ 	<variable>DHCP</variable>
+ </checkbox>"
+  ;;
+  u*|ww*) IMG=usb_modem_ 
+  FNC=""
+  ;;
   *) continue ;;
  esac
  
 if [ "$(cat /sys/class/net/$IFACE/operstate)" = down ]; then
- ACT="up_func"; ST="отключен"; UD="_off"
+ ST="отключен"; ACT="up_func"; UD="off"
 else
- ACT="down_func"; ST="подключен"; UD="_on"
+ ST="подключен"; ACT="down_func"; UD="on"
 fi
 
-echo "<frame $IFACE $ST>
+echo "<frame $IFACE $ST><vbox>
  <button>
  	<height>100</height>
- 	<input file>/usr/share/pixmaps/${IMG}${UD}.svg</input>
+	<input file>/usr/share/pixmaps/${IMG}${UD}.svg</input>
 	<action function=\"exit\">$ACT $IFACE</action>
  </button>
+ $FNC
+ </vbox>
 </frame>" | tee -a /tmp/connect
 done
 
-echo "</hbox>
- <checkbox>
- 	<label>Автоматическая настройка сети (DHCP)</label>
- 	<default>true</default>
- 	<variable>DHCP</variable>
- </checkbox>
-</vbox></window>'" | tee -a /tmp/connect
+echo "</hbox></window>'" | tee -a /tmp/connect
 . /tmp/connect
-eval $(gtkdialog -c --program "Window")
+eval $(/usr/bin/gtkdialog -c --display=:0 --program "Window")
 
 [ "$EXIT" = "abort" ] && exit
 [ "$DHCP" = "false" ] && tunstatic $(echo "$EXIT"|cut -f2 -d' ')

@@ -38,6 +38,7 @@ install:
 	$(INSTALL) -d $(DESTDIR)$(datarootdir)/
 	cp -a applications/ $(DESTDIR)$(datarootdir)/
 	cp -a pixmaps/ $(DESTDIR)$(datarootdir)/
+	cp -a doc/ $(DESTDIR)$(datarootdir)/
 	cp -a etc/ $(DESTDIR)/
 	
 

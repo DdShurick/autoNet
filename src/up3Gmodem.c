@@ -13,10 +13,8 @@ FILE	*fd, *fl;
 
 void	ops() {
 	
-//	fputs("ATZ\n",fd);
 	printf("Поиск сети\n");
 	fprintf(fl,"Поиск сети\n");
-//	system("/usr/local/bin/ntf -i Поиск сети & \n");
 	
 	if (fputs("AT+COPS?\n",fd)) {
 		printf("Оператор: ");
@@ -44,7 +42,7 @@ void	ops() {
 			fclose(fd);
 //			system("/usr/local/bin/ntf -e \"Нет сети\" & \n");
 			fclose(fl);
-			exit(0);
+			exit(1);
 		}
 	}
 }
