@@ -1,5 +1,5 @@
 #!/bin/sh
-#DdShurick 26.09.2018, GPL v2
+#DdShurick 02.06.2019, GPL-v2
 
 if [ $(id -u) != 0 ]; then loginroot $0; exit 0; fi
 
@@ -43,7 +43,13 @@ all_off () {
 	done 
 }
 
-echo "export Window='<window  icon-name=\"network\" title=\"Сетевые интерфейсы\" resizable=\"false\"><hbox>" | tee /tmp/connect
+echo "export Window='<window  icon-name=\"network\" title=\"Сетевые интерфейсы\" resizable=\"false\"><vbox>
+  <checkbox>
+ 	<label>DHCP</label>
+ 	<default>true</default>
+ 	<variable>DHCP</variable>
+  </checkbox>
+ <hbox>" | tee /tmp/connect
 #модем
 if [ -d /sys/bus/usb-serial/devices/ttyUSB0 -o -d /sys/bus/usb-serial/devices/ttyACM0 ]; then
 	if [ "$(pidof pppd)" ]; then ###
@@ -74,11 +80,10 @@ do
  </button>"
   ;;
   wl*|r*) IMG=wireless_ 
-  FNC="<checkbox>
- 	<label>DHCP</label>
- 	<default>true</default>
- 	<variable>DHCP</variable>
- </checkbox>"
+  FNC="<button>
+ 	<label>WiFi</label>
+ 	<action function=\"exit\">wifi</action>
+ </button>"
   ;;
   u*|ww*) IMG=usb_modem_ 
   FNC=""
@@ -103,7 +108,7 @@ echo "<frame $IFACE $ST><vbox>
 </frame>" | tee -a /tmp/connect
 done
 
-echo "</hbox></window>'" | tee -a /tmp/connect
+echo "</hbox></vbox></window>'" | tee -a /tmp/connect
 . /tmp/connect
 eval $(/usr/bin/gtkdialog -c --display=:0 --program "Window")
 
