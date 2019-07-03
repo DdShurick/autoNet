@@ -61,7 +61,8 @@ if [ "$(/usr/bin/cat /sys/class/net/$IFACE/carrier)" = 1 ]; then
 	if [ -s "${CONFDIR}${HWADDR}.conf" ]; then
 		static
 	else
-		dhcpc $(/sbin/udhcpc -i $IFACE -n 2>/dev/null)
+		dhcpc #$(/sbin/udhcpc -i $IFACE -n 2>/dev/null)
+#		/sbin/udhcpc -n -i $IFACE | /usr/bin/tee -a /var/log/$IFACE.log
 		if [ $? = 1 -a $ST = 1 ]; then
 			/sbin/ifconfig $IFACE down
 			/bin/echo "$0: $IFACE down" | /usr/bin/tee -a /var/log/$IFACE.log

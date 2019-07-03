@@ -4,6 +4,7 @@
 if [ $(id -u) != 0 ]; then loginroot $0; exit 0; fi
 
 . /usr/lib64/upNet/libupNet
+WPADIR="/etc/net/wpa_profiles/"
 
 ifdown () {
 	[ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
@@ -51,7 +52,9 @@ eval $(gtkdialog -c --program "Window")
 [ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" -o "$MYESSID" = "" ] && ifdown
 [  "$EXIT" = "Подключить"  ]|| ifdown
 
-KEY=$(grep $MYESSID -B 1 /tmp/iwlist | awk '/Encryption/ {print $2}')
+ 
+
+KEY=$(grep -B 1 $MYESSID /tmp/iwlist | awk '/Encryption/ {print $2}')
 if [ "$KEY" = "key:on" ]; then
 	export Passw="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
   <text><label>Введите пароль для $MYESSID</label></text>
@@ -67,7 +70,8 @@ if [ "$KEY" = "key:on" ]; then
 	[  "$EXIT" = "Подключить"  ] || exit 1
 	/usr/sbin/wpa_passphrase "$MYESSID" "$MYPASSWD" | /bin/grep -v '#psk' | tee /tmp/wpa.conf
 	if /usr/sbin/wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf; then 2>&1 | tee -a /var/log/${IFACE}.log
-		dhcpc $(/sbin/udhcpc -i $IFACE -n 2>/dev/null) #-->libupNet
+		dhcpc #$(/sbin/udhcpc -i $IFACE -n 2>/dev/null) #-->libupNet
+#		/sbin/udhcpc -n -i $IFACE | /usr/bin/tee -a /var/log/$IFACE.log
 		
 		if [ "$?" = 0 ]; then
 			export Addr="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
@@ -91,5 +95,6 @@ if [ "$KEY" = "key:on" ]; then
 	fi
 elif [ "$KEY" = "key:off" ]; then
 	/usr/bin/iwconfig $IFACE essid "$MYESSID" key off
-	dhcpc $(/sbin/udhcpc -i $IFACE -n 2>/dev/null)
+	dhcpc #$(/sbin/udhcpc -i $IFACE -n 2>/dev/null)
+#	/sbin/udhcpc -n -i $IFACE | /usr/bin/tee -a /var/log/$IFACE.log
 fi

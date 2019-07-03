@@ -33,7 +33,7 @@ do
 			WPA_CONF="$(/bin/ls ${WPADIR}${WLNADDR}.wpa.conf)" #???
 			ESSID=$(/usr/bin/awk -F \" '/ESSID/ {print $2}' $WPA_CONF)
 			/bin/echo $WPA_CONF | tee -a /var/log/${IFACE}.log #контроль
-			if /usr/bin/wpa_supplicant -B -D nl80211 -i "$IFACE" -c "${WPADIR}${WLNADDR}.wpa.conf"; then
+			if /usr/sbin/wpa_supplicant -B -D nl80211 -i "$IFACE" -c "${WPADIR}${WLNADDR}.wpa.conf"; then
 				echo "wpa_supplicant ok" | /usr/bin/tee -a /var/log/$IFACE.log 
 				ST=ok
 				break
@@ -69,7 +69,8 @@ else
 	if [ -s ${CONFDIR}${HWADDR}.conf ]; then
 		static
 	else
-		dhcpc $(/sbin/udhcpc -i $IFACE -n 2>/dev/null)
+		dhcpc #$(/sbin/udhcpc -i $IFACE -n 2>/dev/null)
+#		/sbin/udhcpc -n -i $IFACE | /usr/bin/tee -a /var/log/$IFACE.log
 		if [ $? = 1 ]; then
 			ifdown
 			/bin/echo "$0: $IFACE down" | tee -a /var/log/$IFACE.log

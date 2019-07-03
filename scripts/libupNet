@@ -10,7 +10,7 @@ echo $IMG
 	/usr/bin/gtkdialog -c --program=MSG &
 	pid=$!
 	/bin/sleep 5 && /bin/kill $pid
-	exit
+	exit 0
 }
 
 msg_err () {
@@ -55,15 +55,20 @@ ifup () {
 }
 
 check_ping () {
+	if [ -s /etc/resolv.conf ]; then
+		GW=$(grep $(ipaddr show eth0 | awk '/inet/ {print $2}'|cut -f-3 -d'.') /etc/resolv.conf | awk '{print $2}')
+	else
+		msg_err $IFACE "No resolv"
+	fi
 	if /bin/ping -c 1 -W 2 $GW ; then
 		if /bin/ping -c 1 -W 2 8.8.8.8 ; then
-			if /bin/ping -c 1 -W 2 google.ru ; then
+			if /bin/ping -c 1 -W 2 ya.ru ; then
 				/bin/sed -i "s/$1 down/$1 up/" /etc/net/interfaces.lck
 				/bin/echo "$0: Network Ok!" | tee -a /var/log/${IFACE}.log
 				IMG=${IMG}on
 				msg $IFACE "Network Ok!"
 			else
-				msg_err $IFACE "No resolv"
+				msg_err $IFACE "No ping ya.ru"
 			fi
 		else
 			/sbin/route del default $IFACE
@@ -75,7 +80,7 @@ check_ping () {
 		/bin/echo "$0: No ping $GW" | tee -a /var/log/${IFACE}.log
 		[ "$(/bin/pidof wpa_supplicant)" ] && /bin/kill $(/bin/pidof wpa_supplicant)
 		/sbin/ifconfig "$IFACE" down
-		msg_err "No ping $GW"
+		msg_err "No ping"
 	fi
 }
 
@@ -112,24 +117,25 @@ static () {
 }
 
 dhcpc () {
-	if [ "$2" ]; then
-		GW=$1; IP=$2
-	else
-		IP=$1
-	fi
+#	if [ "$2" ]; then
+#		GW=$1; IP=$2
+#	else
+#		IP=$1
+#	fi
 	
-	/sbin/ifconfig $IFACE $IP
-	if [ "$GW" ]; then
-		/sbin/route add default gw $GW
-		/bin/echo "nameserver $GW" | /usr/bin/tee /etc/resolv.conf
+#	/sbin/ifconfig $IFACE $IP
+#	if [ "$GW" ]; then
+#		/sbin/route add default gw $GW
+#		/bin/echo "nameserver $GW" | /usr/bin/tee /etc/resolv.conf
+		/sbin/udhcpc -n -i $IFACE | /usr/bin/tee -a /var/log/$IFACE.log
 		check_ping $HWADDR
 		return 0
-	elif [ "$PPP" ]; then
-		return 0
-	else
-		/sbin/ifconfig $IFACE down
-		/bin/echo "$0: No GW on $IFACE" | /usr/bin/tee -a /var/log/${IFACE}.log
-		msg_err "No GW on $IFACE"
-		return 1
-	fi
+#	elif [ "$PPP" ]; then
+#		return 0
+#	else
+#		/sbin/ifconfig $IFACE down
+#		/bin/echo "$0: No GW on $IFACE" | /usr/bin/tee -a /var/log/${IFACE}.log
+#		msg_err "No GW on $IFACE"
+#		return 1
+#	fi
 }
