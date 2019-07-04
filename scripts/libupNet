@@ -9,7 +9,7 @@ echo $IMG
 	gtkdialog -c --program=MSG &
 	pid=$!
 	sleep 5 && /bin/kill $pid
-	exit 0
+	[ "$1" = "noexit" ] || exit 0
 }
 
 msg_err () {
@@ -49,6 +49,12 @@ ifup () {
 		sleep 3
 		[ "$(cat /sys/class/net/$IFACE/operstate)" = "up" ] && return 0 || return 1
 	fi
+}
+
+ifdown () {
+	[ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
+	ifconfig $IFACE down
+	exit 0
 }
 
 check_ping () {

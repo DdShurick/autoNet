@@ -5,12 +5,7 @@ if [ $(id -u) != 0 ]; then loginroot $0; exit 0; fi
 
 . /usr/lib64/upNet/libupNet
 WPADIR="/etc/net/wpa_profiles/"
-
-ifdown () {
-	[ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
-	ifconfig $IFACE down
-	exit 1
-}
+IMG="wireless_"
 
 IFACE=$(basename $(dirname /sys/class/net/*/phy80211)) 2>/dev/null
 if [ "$IFACE" ]; then
@@ -38,7 +33,7 @@ fi
 [ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
 ifconfig $IFACE up
 sleep 2
-iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | tee /tmp/iwlist
+[ "$1" = "noscan" ] || iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | tee /tmp/iwlist
 export Window="<window title=\"Wi-Fi\"><vbox>
   <text><label>Найдены сети Wi-Fi</label></text>
   <list>
@@ -52,11 +47,14 @@ eval $(gtkdialog -c --program "Window")
 [ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" -o "$MYESSID" = "" ] && ifdown
 [  "$EXIT" = "Подключить"  ]|| ifdown
 
- 
-
+WLNADDR=$(grep -B 4 $MYESSID /tmp/iwlist | awk '/Address:/ {print $5}')
 KEY=$(grep -B 1 $MYESSID /tmp/iwlist | awk '/Encryption/ {print $2}')
+
 if [ "$KEY" = "key:on" ]; then
-	export Passw="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
+	if [ -f ${WPADIR}${WLNADDR}.wpa.conf ]; then
+	 cp ${WPADIR}${WLNADDR}.wpa.conf /tmp/wpa.conf
+	else
+	 export Passw="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
   <text><label>Введите пароль для $MYESSID</label></text>
   <entry>
    <visible>password</visible>
@@ -64,15 +62,16 @@ if [ "$KEY" = "key:on" ]; then
   </entry>
   <button><label>Подключить</label></button>
 </vbox></window>"
-	eval $(gtkdialog -c --program "Passw") 
-	[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
-	[ "$MYPASSWD" ] || exit 1
-	[  "$EXIT" = "Подключить"  ] || exit 1
-	wpa_passphrase "$MYESSID" "$MYPASSWD" | grep -v '#psk' | tee /tmp/wpa.conf
+	 eval $(gtkdialog -c --program "Passw") 
+	 [ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
+	 [ "$MYPASSWD" ] || exit 1
+	 [  "$EXIT" = "Подключить"  ] || exit 1
+	 wpa_passphrase "$MYESSID" "$MYPASSWD" | grep -v '#psk' | tee /tmp/wpa.conf
+	fi
 	if wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf; then 2>&1 | tee -a /var/log/${IFACE}.log
 		dhcpc
 		
-		if [ "$?" = 0 ]; then
+		if [ "$?" = 0 -o "$1" != "noscan" ]; then
 			export Addr="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
   <frame Сеть $MYESSID Ok>
   <text><label>Сохранить ${MYESSID}?</label></text>
