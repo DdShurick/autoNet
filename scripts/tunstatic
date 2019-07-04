@@ -1,6 +1,6 @@
 #!/bin/sh
-#DdShurick 13.04.19 GPL v2
-if [ $(/usr/bin/id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
+#DdShurick GPL v2
+if [ $(id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
 CONFDIR="/etc/net/interfaces/"
 . /usr/lib64/upNet/libupNet
 
@@ -68,7 +68,7 @@ export STATIC="<window icon-name=\"network\" title=\"Static IP\" resizable=\"fal
  </vbox>
 </window>
 "
-eval $(/usr/bin/gtkdialog -c --program "STATIC")
+eval $(gtkdialog -c --program "STATIC")
 
 [ "$EXIT" = "abort" ] && exit
 
@@ -77,12 +77,12 @@ if [ "$ST" = 0 ]; then
 	echo "IP_ADDRESS=\"$IP_ADDRESS\"
 DNS1=\"$DNS1\"
 DNS2=\"$DNS2\"
-GW=\"$GW\"" | /usr/bin/tee ${CONFDIR}${HWADDR}.conf
+GW=\"$GW\"" | tee ${CONFDIR}${HWADDR}.conf
 else
 	 echo "Неправильно указан: $ST"
 export ERROR="<window icon-name=\"network\" title=\"Ошибка\" resizable=\"false\">
   <text><label>Неправильно: $ST.</label></text>
 </window>
 "
-/usr/bin/gtkdialog -c --program "ERROR" 
+gtkdialog -c --program "ERROR" 
 fi

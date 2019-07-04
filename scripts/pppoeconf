@@ -1,6 +1,6 @@
 #!/bin/sh
-#DdShurick 25.08.18 GPL v2
-if [ $(/usr/bin/id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
+#DdShurick GPL v2
+if [ $(id -u) = 0 ]; then DISPLAY="$(cat /tmp/dsp)"; else loginroot $0; exit; fi
 . /usr/lib64/upNet/libupNet
 
 if [ "$IFASE" ]; then
@@ -16,7 +16,7 @@ fi
 ifup
 
 CONFDIR="/etc/net/interfaces/"
-HWADDR=$(/bin/cat /sys/class/net/$IFACE/address)
+HWADDR=$(cat /sys/class/net/$IFACE/address)
 [ -f ${CONFDIR}${HWADDR}.pppoe.conf ] && . ${CONFDIR}${HWADDR}.pppoe.conf
 
 export PPPOECONF="<window icon-name=\"network\" title=\" PPPoE\" resizable=\"false\"><vbox>
@@ -78,7 +78,7 @@ export PPPOECONF="<window icon-name=\"network\" title=\" PPPoE\" resizable=\"fal
  </hbox>
 </vbox></window>
 "
-eval $(/usr/bin/gtkdialog -c --display "$(cat /tmp/dsp)" --program "PPPOECONF")
+eval $(gtkdialog -c --program "PPPOECONF")
 
 [ "$EXIT" = "abort" ] && exit 1
 [ "$NAME" ] ||  MSG="Отсутствует: Имя_соединения"
@@ -102,18 +102,18 @@ IMG=search
 msg "Поиск PPPoE..." &
 pid=$!
 
-if [ "$(/usr/sbin/pppoe-discovery -I ${IFACE}${DSN}${DAC})" ]; then
-	/bin/echo "NAME=$NAME
+if [ "$(pppoe-discovery -I ${IFACE}${DSN}${DAC})" ]; then
+	echo "NAME=$NAME
 LOGIN=$LOGIN
 PASSWD=$PASSWD
-IP=$IP" | /usr/bin/tee ${CONFDIR}${HWADDR}.pppoe.conf
-	[ "$DNS" = "usepeerdns" ] && /bin/echo "DNS=$DNS" | /usr/bin/tee -a ${CONFDIR}${HWADDR}.pppoe.conf
-	[ "$DNS1" ] && /bin/echo "DNS1=$DNS1" | /usr/bin/tee -a ${CONFDIR}${HWADDR}.pppoe.conf
-	[ "$DNS2" ] && /bin/echo "DNS2=$DNS2" | /usr/bin/tee -a ${CONFDIR}${HWADDR}.pppoe.conf
-	[ "$SN" ] && /bin/echo "SN=\"rp_pppoe_service $SN\"" | /usr/bin/tee -a ${CONFDIR}${HWADDR}.pppoe.conf
-	[ "$AC" ] && /bin/echo "AC=\"rp_pppoe_ac $AC\"" | /usr/bin/tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+IP=$IP" | tee ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$DNS" = "usepeerdns" ] && echo "DNS=$DNS" | tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$DNS1" ] && echo "DNS1=$DNS1" | tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$DNS2" ] && echo "DNS2=$DNS2" | tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$SN" ] && echo "SN=\"rp_pppoe_service $SN\"" | tee -a ${CONFDIR}${HWADDR}.pppoe.conf
+	[ "$AC" ] && echo "AC=\"rp_pppoe_ac $AC\"" | tee -a ${CONFDIR}${HWADDR}.pppoe.conf
 	kill $pid
-	exec /usr/sbin/lan.sh $IFACE pppoeup
+	exec lan.sh $IFACE pppoeup
 else
 	IMG=connect_no
 	msg_err "Нет доступа PPPoE"

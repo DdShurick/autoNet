@@ -1,28 +1,28 @@
 #!/bin/sh
-#DdShurick 02.06.2019, GPL-v2
+#DdShurick GPL v2
 
 if [ $(id -u) != 0 ]; then loginroot $0; exit 0; fi
 
 up_func () {
  case $1 in
 	modem)
-		[ -c /dev/ppp ] || /bin/mknod /dev/ppp c 108 0
-		/usr/bin/up3Gmodem && cp /etc/ppp/resolv.conf /etc/resolv.conf
+		[ -c /dev/ppp ] || mknod /dev/ppp c 108 0
+		up3Gmodem && cp /etc/ppp/resolv.conf /etc/resolv.conf
 	;;
 	*)
 		HWADDR=$(cat /sys/class/net/$1/address) || return 1
-		/bin/sed -i "s/$HWADDR down/$HWADDR up/" /etc/net/interfaces.lck
+		sed -i "s/$HWADDR down/$HWADDR up/" /etc/net/interfaces.lck
 		/lib/udev/upNet $1 $HWADDR up
 	;;
  esac
 }
 
 down_func () {
-[ -f /var/run/dhcpcd-${1}.pid ] && /usr/sbin/dhcpcd -k $1
+#[ -f /var/run/dhcpcd-${1}.pid ] && /usr/sbin/dhcpcd -k $1
 [ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
 [ $(pidof wvdial) ] && kill $(pidof wvdial)
 [ $(pidof pppd) ] && killall pppd
-/sbin/ifconfig $1 down
+ifconfig $1 down
 if [ -h /sys/class/net/$1 ]; then
 	HWADDR=$(cat /sys/class/net/$1/address)
 	sed -i "s/$HWADDR up/$HWADDR down/" /etc/net/interfaces.lck
@@ -32,7 +32,7 @@ echo "$1 down" | tee -a /var/log/${1}.log
 }
 
 all_off () {
-	/sbin/route del default
+	route del default
 	ls -1 /sys/class/net | grep -v lo | while read IFACE
 	do
 		if [ "${IFACE:0:4}" = "wlan" ]; then
@@ -110,7 +110,7 @@ done
 
 echo "</hbox></vbox></window>'" | tee -a /tmp/connect
 . /tmp/connect
-eval $(/usr/bin/gtkdialog -c --display=:0 --program "Window")
+eval $(gtkdialog -c --display=:0 --program "Window")
 
 [ "$EXIT" = "abort" ] && exit
 [ "$DHCP" = "false" ] && tunstatic $(echo "$EXIT"|cut -f2 -d' ')

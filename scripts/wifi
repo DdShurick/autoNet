@@ -1,5 +1,5 @@
 #!/bin/sh
-#wi-fi up. DdShurick 29.07.18
+#wi-fi up. DdShurick GPL v2
 
 if [ $(id -u) != 0 ]; then loginroot $0; exit 0; fi
 
@@ -23,7 +23,7 @@ if [ "$IFACE" ]; then
 		</tree>
 		<button><label>Подключить</label></button>
 		</vbox></window>"
-		eval $(gtkdialog -c --display=:0 --program "Iface")
+		eval $(gtkdialog -c --program "Iface")
 		[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
 	fi
 else
@@ -36,9 +36,9 @@ else
 fi
 #[ $(pidof dhcpcd) ] && dhcpcd -k $IFACE
 [ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
-/sbin/ifconfig $IFACE up
+ifconfig $IFACE up
 sleep 2
-/usr/bin/iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | tee /tmp/iwlist
+iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | tee /tmp/iwlist
 export Window="<window title=\"Wi-Fi\"><vbox>
   <text><label>Найдены сети Wi-Fi</label></text>
   <list>
@@ -68,10 +68,9 @@ if [ "$KEY" = "key:on" ]; then
 	[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit 1
 	[ "$MYPASSWD" ] || exit 1
 	[  "$EXIT" = "Подключить"  ] || exit 1
-	/usr/sbin/wpa_passphrase "$MYESSID" "$MYPASSWD" | /bin/grep -v '#psk' | tee /tmp/wpa.conf
-	if /usr/sbin/wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf; then 2>&1 | tee -a /var/log/${IFACE}.log
-		dhcpc #$(/sbin/udhcpc -i $IFACE -n 2>/dev/null) #-->libupNet
-#		/sbin/udhcpc -n -i $IFACE | /usr/bin/tee -a /var/log/$IFACE.log
+	wpa_passphrase "$MYESSID" "$MYPASSWD" | grep -v '#psk' | tee /tmp/wpa.conf
+	if wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf; then 2>&1 | tee -a /var/log/${IFACE}.log
+		dhcpc
 		
 		if [ "$?" = 0 ]; then
 			export Addr="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
@@ -82,11 +81,11 @@ if [ "$KEY" = "key:on" ]; then
   	<action function=\"exit\">Сохранить</action>
   </button>
 </frame></vbox></window>"
-			eval $(gtkdialog -c --display=:0 --program "Addr") 
+			eval $(gtkdialog -c --program "Addr") 
 			[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit
 			[ "$EXIT" = "Сохранить"  ] || exit
-			MYADDR=$(/usr/bin/grep -B 5 "$MYESSID" /tmp/iwlist | /usr/bin/awk '/Address/ {print $5}')
-			/bin/cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
+			MYADDR=$(grep -B 5 "$MYESSID" /tmp/iwlist | awk '/Address/ {print $5}')
+			cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
 		else
 			tunstatic $IFACE
 		fi
@@ -94,7 +93,6 @@ if [ "$KEY" = "key:on" ]; then
 		ifdown
 	fi
 elif [ "$KEY" = "key:off" ]; then
-	/usr/bin/iwconfig $IFACE essid "$MYESSID" key off
-	dhcpc #$(/sbin/udhcpc -i $IFACE -n 2>/dev/null)
-#	/sbin/udhcpc -n -i $IFACE | /usr/bin/tee -a /var/log/$IFACE.log
+	iwconfig $IFACE essid "$MYESSID" key off
+	dhcpc
 fi

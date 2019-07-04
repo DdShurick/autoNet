@@ -1,5 +1,4 @@
 msg () {
-#	ntf -i ${IFACE}: "$1"
 echo $IMG
 	export MSG="<window title=\"WWW\" resizable=\"false\"><frame $@>
  <pixmap>
@@ -7,15 +6,13 @@ echo $IMG
   <input file>/usr/share/pixmaps/${IMG}.svg</input>
  </pixmap>
  </frame></window>"
-	/usr/bin/gtkdialog -c --program=MSG &
+	gtkdialog -c --program=MSG &
 	pid=$!
-	/bin/sleep 5 && /bin/kill $pid
+	sleep 5 && /bin/kill $pid
 	exit 0
 }
 
 msg_err () {
-#	/sbin/ifconfig "$IFACE" down
-#	ntf -i ${IFACE}: "$1"
 	[ "$IMG" ] && IMG=/usr/share/pixmaps/${IMG}.svg || IMG=/usr/share/pixmaps/error.svg
 	export MSG="<window title=\"WWW\" resizable=\"false\"><frame $@>
  <pixmap>
@@ -23,7 +20,7 @@ msg_err () {
   <input file>$IMG</input>
  </pixmap>
  </frame></window>"
-	/usr/bin/gtkdialog -c --program=MSG &
+	gtkdialog -c --program=MSG &
 }
 
 select_iface () {
@@ -41,101 +38,80 @@ select_iface () {
  </vbox>
 </window>
 "
-eval $(/usr/bin/gtkdialog -c --program "LIST")
+eval $(gtkdialog -c --program "LIST")
 [ "$EXIT" = "abort" -o "$EXIT" = "Cancel" ] && exit
 [ "$IFACE" = "" ] && ( msg_err "Ничего не выбрано. Выходим." ; exit; )
 }
 
 ifup () {
-	if [ "$(/bin/cat /sys/class/net/$IFACE/operstate)" != "up" ]; then
-		/sbin/ifconfig $IFACE up
+	if [ "$(cat /sys/class/net/$IFACE/operstate)" != "up" ]; then
+		ifconfig $IFACE up
 		sleep 3
-		[ "$(/bin/cat /sys/class/net/$IFACE/operstate)" = "up" ] && return 0 || return 1
+		[ "$(cat /sys/class/net/$IFACE/operstate)" = "up" ] && return 0 || return 1
 	fi
 }
 
 check_ping () {
 	if [ -s /etc/resolv.conf ]; then
-		GW=$(grep $(ipaddr show eth0 | awk '/inet/ {print $2}'|cut -f-3 -d'.') /etc/resolv.conf | awk '{print $2}')
+#		GW=$(grep $(ipaddr show eth0 | awk '/inet/ {print $2}'|cut -f-3 -d'.') /etc/resolv.conf | awk '{print $2}')
+		awk '{print $2}' /etc/resolv.conf | while read IP
+			do ping -c 1 -W 2 $IP && break
+			done || return 1
 	else
-		msg_err $IFACE "No resolv"
+		msg_err $IFACE "No resolv.conf"
 	fi
-	if /bin/ping -c 1 -W 2 $GW ; then
-		if /bin/ping -c 1 -W 2 8.8.8.8 ; then
-			if /bin/ping -c 1 -W 2 ya.ru ; then
-				/bin/sed -i "s/$1 down/$1 up/" /etc/net/interfaces.lck
-				/bin/echo "$0: Network Ok!" | tee -a /var/log/${IFACE}.log
-				IMG=${IMG}on
-				msg $IFACE "Network Ok!"
-			else
-				msg_err $IFACE "No ping ya.ru"
-			fi
+	if ping -c 1 -W 2 8.8.8.8 ; then
+		if ping -c 1 -W 2 ya.ru ; then
+			sed -i "s/$1 down/$1 up/" /etc/net/interfaces.lck
+			echo "$0: Network Ok!" | tee -a /var/log/${IFACE}.log
+			IMG=${IMG}on
+			msg $IFACE "Network Ok!"
 		else
-			/sbin/route del default $IFACE
-			/bin/echo "$0: Connect LAN" | tee -a /var/log/${IFACE}.log
 			IMG=${IMG}lan
-			msg $IFACE "Connect only LAN"
+			msg $IFACE "No ping ya.ru"
 		fi
 	else
-		/bin/echo "$0: No ping $GW" | tee -a /var/log/${IFACE}.log
-		[ "$(/bin/pidof wpa_supplicant)" ] && /bin/kill $(/bin/pidof wpa_supplicant)
-		/sbin/ifconfig "$IFACE" down
-		msg_err "No ping"
+		route del default $IFACE
+		echo "$0: Connect LAN" | tee -a /var/log/${IFACE}.log
+		IMG=${IMG}lan
+		msg $IFACE "Connect only LAN"
 	fi
+	[ "$(pidof wpa_supplicant)" ] && kill $(pidof wpa_supplicant)
+	ifconfig "$IFACE" down
 }
 
 static () {
 	. ${CONFDIR}${HWADDR}.conf
 	if [ "$IP_ADDRESS" ]; then
-		/sbin/ifconfig "$IFACE" "$IP_ADDRESS"
+		ifconfig "$IFACE" "$IP_ADDRESS"
 	else
-		/bin/echo "$0: No IP in $HWCONFIGFILE" | /usr/bin/tee -a /var/log/$IFACE.log
+		echo "$0: No IP in $HWCONFIGFILE" | tee -a /var/log/$IFACE.log
 		msg_err $IFACE "Не указан IP"
 	fi
 	if [ "$DNS_SERVER1" -a "$DNS_SERVER1" != "0.0.0.0" ]; then
-		/bin/mv -f /etc/resolv.conf /etc/resolv.conf.old
-		/bin/echo "nameserver $DNS_SERVER1" | /usr/bin/tee /etc/resolv.conf
+		mv -f /etc/resolv.conf /etc/resolv.conf.old
+		echo "nameserver $DNS_SERVER1" | tee /etc/resolv.conf
 		if [ "$DNS_SERVER2" -a "$DNS_SERVER2" != "0.0.0.0" ]; then
-			/bin/echo "nameserver $DNS_SERVER2" | /usr/bin/tee -a /etc/resolv.conf
+			echo "nameserver $DNS_SERVER2" | tee -a /etc/resolv.conf
 		fi
 	else
-		/bin/echo "$0: No DNS_SERVERS in $HWCONFIGFILE" | /usr/bin/tee -a /var/log/${IFACE}.log
+		echo "$0: No DNS_SERVERS in $HWCONFIGFILE" | tee -a /var/log/${IFACE}.log
 		msg_err $IFACE "No DNS_SERVERS in $HWCONFIGFILE"
 	fi
 	if [ "$GW" ]; then
-		/sbin/route add default gw "$GW"
-		if [ $? -eq 0 ]; then #0=ok.
-			check_ping
-		else
-			/bin/echo -e "$0: No ping $GW." | /usr/bin/tee -a /var/log/$IFACE.log
+		route add default gw "$GW" && check_ping
+		if [ $? != 0 ]; then
+			echo -e "$0: No ping $GW." | tee -a /var/log/$IFACE.log
 			msg_err $IFACE "No ping $GW."
 		fi
 	else
-		/bin/echo -e "$0: Не указан GW в $HWCONFIGFILE" | /usr/bin/tee -a /var/log/$IFACE.log
+		echo -e "$0: Не указан GW в $HWCONFIGFILE" | tee -a /var/log/$IFACE.log
 		msg_err $IFACE "Не указан GW в $HWCONFIGFILE"
 	fi
 }
 
 dhcpc () {
-#	if [ "$2" ]; then
-#		GW=$1; IP=$2
-#	else
-#		IP=$1
-#	fi
-	
-#	/sbin/ifconfig $IFACE $IP
-#	if [ "$GW" ]; then
-#		/sbin/route add default gw $GW
-#		/bin/echo "nameserver $GW" | /usr/bin/tee /etc/resolv.conf
-		/sbin/udhcpc -n -i $IFACE | /usr/bin/tee -a /var/log/$IFACE.log
-		check_ping $HWADDR
-		return 0
-#	elif [ "$PPP" ]; then
-#		return 0
-#	else
-#		/sbin/ifconfig $IFACE down
-#		/bin/echo "$0: No GW on $IFACE" | /usr/bin/tee -a /var/log/${IFACE}.log
-#		msg_err "No GW on $IFACE"
-#		return 1
-#	fi
+	udhcpc -s /etc/udhcpc/udhcpc.sh -n -i $IFACE | tee -a /var/log/$IFACE.log
+	check_ping $HWADDR
+	return 0
 }
