@@ -59,31 +59,28 @@ ifdown () {
 
 check_ping () {
 	if [ -s /etc/resolv.conf ]; then
-#		GW=$(grep $(ipaddr show eth0 | awk '/inet/ {print $2}'|cut -f-3 -d'.') /etc/resolv.conf | awk '{print $2}')
 		awk '{print $2}' /etc/resolv.conf | while read IP
 			do ping -c 1 -W 2 $IP && break
 			done || return 1
 	else
-		msg_err $IFACE "No resolv.conf"
+		msg_err $IFACE "Blank /etc/resolv.conf"
+		return 1
 	fi
-	if ping -c 1 -W 2 8.8.8.8 ; then
-		if ping -c 1 -W 2 ya.ru ; then
-			sed -i "s/$1 down/$1 up/" /etc/net/interfaces.lck
-			echo "$0: Network Ok!" | tee -a /var/log/${IFACE}.log
-			IMG=${IMG}on
-			msg $IFACE "Network Ok!"
-		else
-			IMG=${IMG}lan
-			msg $IFACE "No ping ya.ru"
-		fi
+	if ping -c 1 -W 2 ya.ru ; then
+		sed -i "s/$1 down/$1 up/" /etc/net/interfaces.lck
+		echo "$0: Network Ok!" | tee -a /var/log/${IFACE}.log
+		IMG=${IMG}on
+		msg $IFACE "Network Ok!"
+	elif ping -c 1 -W 2 8.8.8.8 ; then
+		IMG=${IMG}lan
+		msg $IFACE "Network yes, no ping ya.ru"
 	else
 		route del default $IFACE
 		echo "$0: Connect LAN" | tee -a /var/log/${IFACE}.log
 		IMG=${IMG}lan
 		msg $IFACE "Connect only LAN"
 	fi
-	[ "$(pidof wpa_supplicant)" ] && kill $(pidof wpa_supplicant)
-	ifconfig "$IFACE" down
+	ifdown
 }
 
 static () {
@@ -119,5 +116,5 @@ static () {
 dhcpc () {
 	udhcpc -s /etc/udhcpc/udhcpc.sh -n -i $IFACE | tee -a /var/log/$IFACE.log
 	check_ping $HWADDR
-	return 0
+	return $?
 }
