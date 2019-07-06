@@ -21,8 +21,6 @@ const gchar *ussd;
 char enter_callback(GtkWidget *widget, GtkWidget *entry) {
 
 	ussd = gtk_entry_get_text(GTK_ENTRY(entry));
-//	printf("%s\n", ussd);
-//	return(ussd);
 	gtk_main_quit ();
 	
 }
@@ -114,8 +112,10 @@ int main(int argc, char **argv) {
 	}
 //Отправляем команду
 	if ((fd = fopen("/dev/modem_cli","r+"))==NULL) {
-		printf("Модем недоступен\n");
-		exit(1);
+		if ((fd = fopen("/dev/modem","r+"))==NULL) {
+			printf("Модем недоступен\n");
+			exit(1);
+		}
 	}
 	strcat(cmd,sussd);
 	strcat(cmd,",15\n");
@@ -129,7 +129,9 @@ int main(int argc, char **argv) {
 			sleep(5);
 			fclose(fd);
 			printf("Нет ответа\n");
-			kill(getppid(),SIGTERM);
+			kill(getppid(),15);
+			raise(15);
+			exit (0);
 		default:
 			fo = fopen("/tmp/ussd_answer","w"); //
 			while ((strstr(str,"\","))==NULL) {
@@ -144,7 +146,7 @@ int main(int argc, char **argv) {
 					fclose(fd);
 					putwchar('\n');
 					fclose(fo); //
-					kill(pid,SIGTERM);
+					kill(pid,15);
 				}
 			}
 		
