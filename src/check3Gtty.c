@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
 	strcat(dev,argv[1]);
 	
 	if ((fd = fopen(dev,"r+"))==NULL) exit(1); 
-	
+	sleep (5);
 	fputs("AT\n",fd);
 	
 	switch(pid=fork()) {
@@ -26,23 +26,21 @@ int main(int argc, char **argv) {
 			kill(getppid(),15);
 			raise(15);
 		default:
-			if (fgetc(fd)) {
-				while (1) {
-					fgets(str,9,fd);
-					if (str[0] == '^') {
-						unlink("/dev/modem_cli");
-						symlink(dev,"/dev/modem_cli");
-						break;
-					}
-					if ((strstr(str,"OK")) != NULL) {
-						unlink("/dev/modem");
-						symlink(dev,"/dev/modem");
-						break;
-					}
+			while (fgets(str,9,fd) != NULL) {
+				if (str[0] == '\n') continue;
+				if (str[0] == '^') {
+					unlink("/dev/modem_cli");
+					symlink(dev,"/dev/modem_cli");
+					break;
 				}
-				fclose(fd);
-				kill(pid,15);
+				if ((strstr(str,"OK")) != NULL) {
+					unlink("/dev/modem");
+					symlink(dev,"/dev/modem");
+					break;
+				}
 			}
+			fclose(fd);
+			kill(pid,15);
 	}
 	exit (0);
 }
