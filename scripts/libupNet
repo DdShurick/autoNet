@@ -9,7 +9,7 @@ echo $IMG
 	gtkdialog -c --program=MSG &
 	pid=$!
 	sleep 5 && /bin/kill $pid
-	[ "$1" = "noexit" ] || exit 0
+	[ "Exit" = "no" ] || exit 0
 }
 
 msg_err () {
@@ -46,8 +46,7 @@ eval $(gtkdialog -c --program "LIST")
 ifup () {
 	if [ "$(cat /sys/class/net/$IFACE/operstate)" != "up" ]; then
 		ifconfig $IFACE up
-		sleep 3
-		[ "$(cat /sys/class/net/$IFACE/operstate)" = "up" ] && return 0 || return 1
+		return $?
 	fi
 }
 

@@ -21,11 +21,9 @@ if [ ! -s /tmp/iwlist ]; then
 	exit 0
 fi
 [ $(awk '/Address:/ {print $5}' /tmp/iwlist | wc -w) -gt 1 ] && exec wifi noscan
-#for WLNADDR in $(awk '/Address:/ {print $5}' /tmp/iwlist)
-#do
+
 WLNADDR=$(awk '/Address:/ {print $5}' /tmp/iwlist)
 	if [ "$(grep -A 3 $WLNADDR /tmp/iwlist | grep 'Encryption key:off')" ];then
-#	 grep -A 4 $WLNADDR /tmp/iwlist | tee -a /tmp/iwopen #Запомним открытые
 	 MAXLEVEL=$(grep -A 2 $WLNADDR /tmp/iwopen | grep 'Quality' | cut -f2 -d '-' | sort | head -n 1)
 	 ESSID=$(grep -A 2 "$MAXLEVEL" /tmp/iwopen | grep ESSID | cut -f2 -d ':' | tr -d '"')
 	 CHANNEL=$(grep -B 1 "$MAXLEVEL" /tmp/iwopen | grep Channel | cut -f2 -d ':')
@@ -39,20 +37,9 @@ WLNADDR=$(awk '/Address:/ {print $5}' /tmp/iwlist)
 			if wpa_supplicant -B -D nl80211 -i "$IFACE" -c "${WPADIR}${WLNADDR}.wpa.conf"; then
 				echo "wpa_supplicant ok" | tee -a /var/log/$IFACE.log 
 				WS=ok
-#				break
 			fi
-#		else
-#			continue
 		fi
 	fi 
-#	if [ -s /tmp/iwopen ]; then
-#	 MAXLEVEL=$(grep -A 2 $WLNADDR /tmp/iwopen | grep 'Quality' | cut -f2 -d '-' | sort | head -n 1)
-#	 ESSID=$(grep -A 2 "$MAXLEVEL" /tmp/iwopen | grep ESSID | cut -f2 -d ':' | tr -d '"')
-#	 CHANNEL=$(grep -B 1 "$MAXLEVEL" /tmp/iwopen | grep Channel | cut -f2 -d ':')
-#	 iwconfig $IFACE essid $ESSID key off channel $CHANNEL && ST=ok
-#	 echo "$IFACE essid $ESSID key off channel $CHANNEL" | tee -a /var/log/$IFACE.log #контроль
-#	fi
-#done
 if [ "$WS" = "" ]; then
 	exec wifi
 else

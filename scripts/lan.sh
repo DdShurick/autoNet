@@ -50,6 +50,7 @@ fi
 }
 
 ifup && echo "$0: $IFACE up" | tee /var/log/${IFACE}.log
+sleep 3
 
 if [ "$(cat /sys/class/net/$IFACE/carrier)" = 1 ]; then
 	echo "$0: carrier yes" | tee -a /var/log/${IFACE}.log

@@ -31,8 +31,8 @@ else
 fi
 #[ $(pidof dhcpcd) ] && dhcpcd -k $IFACE
 [ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
-ifconfig $IFACE up
-sleep 2
+ifup
+
 [ "$1" = "noscan" ] || iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | tee /tmp/iwlist
 export Window="<window title=\"Wi-Fi\"><vbox>
   <text><label>Найдены сети Wi-Fi</label></text>
