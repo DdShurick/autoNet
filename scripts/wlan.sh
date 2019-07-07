@@ -12,7 +12,7 @@ HWADDR=$(cat /sys/class/net/$IFACE/address)
 #Получаем список точек доступа и ищем файл конфигурации
 if ifup; then
 	echo "$IFACE up" | tee /var/log/$IFACE.log
-	iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | tee /tmp/iwlist #контроль
+	iwlist $IFACE scan | egrep 'Address:|Channel:|Quality|Encryption key:|ESSID:' | tee /tmp/iwlist
 fi
 if [ ! -s /tmp/iwlist ]; then 
 	IMG=wireless_err
@@ -39,7 +39,7 @@ WLNADDR=$(awk '/Address:/ {print $5}' /tmp/iwlist)
 				WS=ok
 			fi
 		fi
-	fi 
+	fi
 if [ "$WS" = "" ]; then
 	exec wifi
 else

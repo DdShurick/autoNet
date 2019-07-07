@@ -53,6 +53,7 @@ KEY=$(grep -B 1 $MYESSID /tmp/iwlist | awk '/Encryption/ {print $2}')
 if [ "$KEY" = "key:on" ]; then
 	if [ -f ${WPADIR}${WLNADDR}.wpa.conf ]; then
 	 cp ${WPADIR}${WLNADDR}.wpa.conf /tmp/wpa.conf
+	 noexit=no
 	else
 	 export Passw="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
   <text><label>Введите пароль для $MYESSID</label></text>
@@ -71,7 +72,8 @@ if [ "$KEY" = "key:on" ]; then
 	if wpa_supplicant -B -D nl80211 -i $IFACE -c /tmp/wpa.conf; then 2>&1 | tee -a /var/log/${IFACE}.log
 		dhcpc
 		
-		if [ "$?" = 0 -o "$1" != "noscan" ]; then
+		if [ "$?" = 0 ]; then
+			[ "$noexit" = "no" ] && exit 0
 			export Addr="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
   <frame Сеть $MYESSID Ok>
   <text><label>Сохранить ${MYESSID}?</label></text>

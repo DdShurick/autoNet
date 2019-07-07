@@ -9,7 +9,7 @@ echo $IMG
 	gtkdialog -c --program=MSG &
 	pid=$!
 	sleep 5 && /bin/kill $pid
-	[ "Exit" = "no" ] || exit 0
+	return 0
 }
 
 msg_err () {
@@ -79,7 +79,7 @@ check_ping () {
 		IMG=${IMG}lan
 		msg $IFACE "Connect only LAN"
 	fi
-	ifdown
+#	ifdown
 }
 
 static () {
