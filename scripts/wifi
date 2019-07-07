@@ -77,14 +77,14 @@ if [ "$KEY" = "key:on" ]; then
 			export Addr="<window icon-name=\"network\" title=\"Wi-Fi\" resizable=\"false\"><vbox>
   <frame Сеть $MYESSID Ok>
   <text><label>Сохранить ${MYESSID}?</label></text>
-  <button><height>100</height>
-  	<input file>/usr/share/pixmaps/wireless_on.svg</input>
-  	<action function=\"exit\">Сохранить</action>
-  </button>
+	<hbox>
+		<button yes></button>
+		<button no></button>
+	</hbox>
 </frame></vbox></window>"
 			eval $(gtkdialog -c --program "Addr") 
-			[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit
-			[ "$EXIT" = "Сохранить"  ] || exit
+			[ "$EXIT" = "No" -o  "$EXIT" = "abort" ] && exit
+			[ "$EXIT" = "Yes"  ] || exit
 			MYADDR=$(grep -B 5 "$MYESSID" /tmp/iwlist | awk '/Address/ {print $5}')
 			cp /tmp/wpa.conf /etc/net/wpa_profiles/${MYADDR}.wpa.conf
 		else
