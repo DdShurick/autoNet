@@ -8,7 +8,7 @@ echo $IMG
  </frame></window>"
 	gtkdialog -c --program=MSG &
 	pid=$!
-	sleep 5 && /bin/kill $pid
+	sleep 5 && kill $pid
 	return 0
 }
 

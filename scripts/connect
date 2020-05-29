@@ -18,7 +18,6 @@ up_func () {
 }
 
 down_func () {
-#[ -f /var/run/dhcpcd-${1}.pid ] && /usr/sbin/dhcpcd -k $1
 [ $(pidof wpa_supplicant) ] && kill $(pidof wpa_supplicant)
 [ $(pidof wvdial) ] && kill $(pidof wvdial)
 [ $(pidof pppd) ] && killall pppd

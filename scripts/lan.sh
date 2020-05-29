@@ -9,14 +9,14 @@ esac
 
 . /usr/lib64/upNet/libupNet
 CONFDIR="/etc/net/interfaces/"
-HWADDR=$(/bin/cat /sys/class/net/$IFACE/address)
+HWADDR=$(cat /sys/class/net/$IFACE/address)
 
 pppoeup () {
 if [ -f ${CONFDIR}${HWADDR}.pppoe.conf ]; then
 	. ${CONFDIR}${HWADDR}.pppoe.conf
 	modprobe pppoe
 	[ grep "$LOGIN" /etc/ppp/chap-secrets ] || echo "$LOGIN	*	$PASSWD	$IP" >> /etc/ppp/chap-secrets
-	[ grep "$LOGIN" /etc/ppp/pap-secrets ] || /bin/echo "$LOGIN	*	$PASSWD	$IP" >> /etc/ppp/pap-secrets
+	[ grep "$LOGIN" /etc/ppp/pap-secrets ] || echo "$LOGIN	*	$PASSWD	$IP" >> /etc/ppp/pap-secrets
 	echo "plugin rp-pppoe.so
 $AC
 $SN
