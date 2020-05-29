@@ -28,9 +28,3 @@ usb?|ww*)
 	lan.sh $1 &
 ;;
 esac
-
-until [ -s /tmp/dsp ]; do sleep 1; done;
-[ "$(pidof netTun)" ] && exit 0
-export DISPLAY="$(cat /tmp/dsp)" 
-export $(grep LANG= /etc/profile)
-netTun &
